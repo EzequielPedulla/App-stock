@@ -32,6 +32,16 @@ class ProductController:
                     "Error", "Todos los campos son obligatorios")
                 return
 
+            # Verificar si el código de barras ya existe (solo si es diferente al actual)
+            if self.selected_product and self.product_form.editing_mode:
+                if data['barcode'] != self.selected_product.barcode:
+                    existing_product = self.db.get_product_by_barcode(
+                        data['barcode'])
+                    if existing_product:
+                        messagebox.showerror(
+                            "Error", "Ya existe un producto con ese código de barras")
+                        return
+
             # Crear producto
             product = Product(
                 barcode=data['barcode'],
@@ -55,8 +65,6 @@ class ProductController:
             self.selected_product = None
             self.load_products()
             self.product_form.set_action_buttons_state(False)
-            self.product_form.barcode_entry.configure(
-                state='normal')  # Habilitar código de barras
 
         except ValueError as e:
             if "could not convert string to float" in str(e):
@@ -88,7 +96,8 @@ class ProductController:
         values = item['values']
 
         # Buscar el producto en la base de datos por código de barras
-        self.selected_product = self.db.get_product_by_barcode(values[0])
+        barcode = values[0]  # El código de barras está en la primera columna
+        self.selected_product = self.db.get_product_by_barcode(barcode)
 
         # Habilitar los botones si hay un producto seleccionado
         if self.selected_product:
@@ -97,7 +106,8 @@ class ProductController:
             print(f"Producto seleccionado: {self.selected_product.name}")
         else:
             self.product_form.set_action_buttons_state(False)
-            print("No se encontró el producto")  # Para debug
+            # Para debug
+            print(f"No se encontró el producto con código: {barcode}")
 
     def start_edit(self):
         if not self.selected_product:
@@ -105,34 +115,50 @@ class ProductController:
                 "Error", "Por favor seleccione un producto para editar")
             return
 
-        # Cargar datos en el formulario
-        self.product_form.clear_fields()  # Limpiar campos primero
+        try:
+            # Cargar datos en el formulario
+            self.product_form.clear_fields()  # Limpiar campos primero
 
-        self.product_form.barcode_entry.insert(
-            0, self.selected_product.barcode)
-        self.product_form.name_entry.insert(0, self.selected_product.name)
-        self.product_form.price_entry.insert(
-            0, str(self.selected_product.price))
-        self.product_form.stock_entry.insert(
-            0, str(self.selected_product.stock))
+            # Insertar los datos del producto seleccionado
+            self.product_form.barcode_entry.insert(
+                0, self.selected_product.barcode)
+            self.product_form.name_entry.insert(0, self.selected_product.name)
+            self.product_form.price_entry.insert(
+                0, f"{self.selected_product.price:.2f}")
+            self.product_form.stock_entry.insert(
+                0, str(self.selected_product.stock))
 
-        # Cambiar a modo edición
-        self.product_form.set_editing_mode(True)
-        # Deshabilitar código de barras solo en edición
-        self.product_form.barcode_entry.configure(state='disabled')
+            # Cambiar a modo edición
+            self.product_form.set_editing_mode(True)
+            # Ya no deshabilitamos el código de barras
+            # Para debug
+            print(
+                f"Iniciando edición del producto: {self.selected_product.name}")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"Error al iniciar la edición: {str(e)}")
+            self.product_form.clear_fields()
+            self.product_form.set_editing_mode(False)
 
     def delete_product(self):
         if not self.selected_product:
             messagebox.showerror("Error", "Por favor seleccione un producto")
             return
 
-        if messagebox.askyesno("Confirmar", "¿Está seguro de eliminar este producto?"):
-            self.db.delete_product(self.selected_product.id)
-            self.selected_product = None
-            self.product_form.clear_fields()
-            self.load_products()
-            self.product_form.set_action_buttons_state(False)
-            messagebox.showinfo("Éxito", "Producto eliminado correctamente")
+        try:
+            if messagebox.askyesno("Confirmar", f"¿Está seguro de eliminar el producto {self.selected_product.name}?"):
+                self.db.delete_product(self.selected_product.id)
+                self.selected_product = None
+                self.product_form.clear_fields()
+                self.load_products()
+                self.product_form.set_action_buttons_state(False)
+                messagebox.showinfo(
+                    "Éxito", "Producto eliminado correctamente")
+                print("Producto eliminado exitosamente")  # Para debug
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"Error al eliminar el producto: {str(e)}")
+            print(f"Error al eliminar: {str(e)}")  # Para debug
 
     def cancel_edit(self):
         self.product_form.clear_fields()

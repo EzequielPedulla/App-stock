@@ -79,14 +79,10 @@ class ProductForm(ttk.LabelFrame):
             self.configure(text="Editar Producto")
             self.save_button.configure(text="Guardar Cambios")
             self.cancel_button.pack(side='left', padx=5)
-            # Deshabilitar solo en modo edición
-            self.barcode_entry.configure(state='disabled')
         else:
             self.configure(text="Agregar Producto")
             self.save_button.configure(text="Guardar")
             self.cancel_button.pack_forget()
-            # Habilitar en modo normal
-            self.barcode_entry.configure(state='normal')
 
     def set_action_buttons_state(self, enabled):
         state = "normal" if enabled else "disabled"
