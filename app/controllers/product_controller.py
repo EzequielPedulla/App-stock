@@ -163,5 +163,3 @@ class ProductController:
     def cancel_edit(self):
         self.product_form.clear_fields()
         self.product_form.set_action_buttons_state(False)
-        # Habilitar código de barras al cancelar
-        self.product_form.barcode_entry.configure(state='normal')
