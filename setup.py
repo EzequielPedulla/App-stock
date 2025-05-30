@@ -6,7 +6,16 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        # Aquí irían las dependencias principales del proyecto
+        "ttkbootstrap>=1.10.1",
+        "sqlite3",
     ],
     python_requires=">=3.8",
+    author="Eze",
+    description="Aplicación de gestión de inventario y ventas",
+    keywords="inventory, sales, management",
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: End Users/Desktop",
+        "Programming Language :: Python :: 3.8",
+    ],
 )
