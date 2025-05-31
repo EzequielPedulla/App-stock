@@ -37,57 +37,105 @@ class SaleForm(ttk.Frame):
         # Cantidad
         qty_label = ttk.Label(card, text="Cantidad",
                               font=("Segoe UI", 11))
-        qty_label.grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
+        qty_label.grid(row=1, column=1, sticky=tk.W, pady=(0, 5))
 
         self.qty_entry = ttk.Entry(card, font=("Segoe UI", 12))
-        self.qty_entry.grid(row=4, column=0, sticky=tk.EW,
+        self.qty_entry.grid(row=2, column=1, sticky=tk.EW,
                             pady=(0, 10), padx=(0, 10))
 
-        # Botón Agregar
+        # Botones de acción
         self.add_button = ttk.Button(
             card, text="Agregar", style="primary.TButton", width=15)
-        self.add_button.grid(row=5, column=1, sticky=tk.E,
+        self.add_button.grid(row=2, column=2, sticky=tk.E,
                              padx=(10, 0), pady=5)
 
+        self.edit_button = ttk.Button(
+            card, text="Editar", style="warning.TButton", width=15)
+        self.edit_button.grid(row=2, column=3, sticky=tk.E,
+                              padx=(10, 0), pady=5)
+        self.edit_button.configure(state="disabled")
+
+        self.delete_button = ttk.Button(
+            card, text="Eliminar", style="danger.TButton", width=15)
+        self.delete_button.grid(row=2, column=4, sticky=tk.E,
+                                padx=(10, 0), pady=5)
+        self.delete_button.configure(state="disabled")
+
         card.columnconfigure(0, weight=1)
+        card.columnconfigure(1, weight=1)
 
         # Productos seleccionados
         prod_sel_label = ttk.Label(
             self, text="Productos Seleccionados", font=("Segoe UI", 14, "bold"))
         prod_sel_label.pack(anchor=tk.W, pady=(10, 0))
 
-        # Frame para la tabla y botones
+        # Frame para la tabla
         table_frame = ttk.Frame(self, style="Card.TFrame", padding=10)
         table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
-        # Frame para los botones de acción
-        buttons_frame = ttk.Frame(table_frame)
-        buttons_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 10))
+        # Configurar el estilo antes de crear la tabla
+        style = ttk.Style()
 
-        # Botones de acción
-        self.edit_button = ttk.Button(
-            buttons_frame, text="Editar", style="warning.TButton", width=15)
-        self.edit_button.pack(side=tk.LEFT, padx=5)
+        # Estilo para la tabla
+        style.configure(
+            "Custom.Treeview",
+            background="white",
+            foreground="black",
+            rowheight=35,
+            fieldbackground="white",
+            borderwidth=1,
+            font=('Segoe UI', 11)
+        )
 
-        self.delete_button = ttk.Button(
-            buttons_frame, text="Eliminar", style="danger.TButton", width=15)
-        self.delete_button.pack(side=tk.LEFT, padx=5)
+        # Estilo para los encabezados
+        style.configure(
+            "Custom.Treeview.Heading",
+            background="#2c3e50",
+            foreground="white",
+            relief="flat",
+            borderwidth=1,
+            font=('Segoe UI', 12, 'bold')
+        )
+
+        # Estilo para la selección
+        style.map(
+            "Custom.Treeview",
+            background=[("selected", "#3498db")],
+            foreground=[("selected", "white")]
+        )
 
         # Tabla de productos
         columns = ("barcode", "name", "qty", "price", "subtotal")
         self.tree = ttk.Treeview(
-            table_frame, columns=columns, show="headings", height=6)
-        self.tree.heading("barcode", text="Código de barras")
-        self.tree.heading("name", text="Nombre")
-        self.tree.heading("qty", text="Cantidad")
-        self.tree.heading("price", text="Precio")
-        self.tree.heading("subtotal", text="Subtotal")
-        self.tree.column("barcode", width=140, anchor=tk.CENTER)
-        self.tree.column("name", width=140, anchor=tk.CENTER)
-        self.tree.column("qty", width=80, anchor=tk.CENTER)
-        self.tree.column("price", width=80, anchor=tk.CENTER)
-        self.tree.column("subtotal", width=100, anchor=tk.CENTER)
-        self.tree.pack(fill=tk.BOTH, expand=True)
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=6,
+            style="Custom.Treeview"
+        )
+
+        # Definir los encabezados
+        self.tree.heading("barcode", text="Código de barras", anchor="center")
+        self.tree.heading("name", text="Nombre", anchor="center")
+        self.tree.heading("qty", text="Cantidad", anchor="center")
+        self.tree.heading("price", text="Precio", anchor="center")
+        self.tree.heading("subtotal", text="Subtotal", anchor="center")
+
+        # Configurar el ancho y alineación de las columnas
+        self.tree.column("barcode", width=180, anchor="center", minwidth=180)
+        self.tree.column("name", width=250, anchor="center", minwidth=250)
+        self.tree.column("qty", width=120, anchor="center", minwidth=120)
+        self.tree.column("price", width=120, anchor="center", minwidth=120)
+        self.tree.column("subtotal", width=120, anchor="center", minwidth=120)
+
+        # Agregar scrollbar
+        scrollbar = ttk.Scrollbar(
+            table_frame, orient=VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # Empaquetar la tabla y el scrollbar
+        self.tree.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
 
         # Total general
         total_frame = ttk.Frame(self)
@@ -108,3 +156,29 @@ class SaleForm(ttk.Frame):
             event: El evento de tecla.
         """
         self.event_generate("<<AddItem>>")
+
+    def get_item_data(self) -> dict:
+        """Obtiene los datos del formulario.
+
+        Returns:
+            dict: Diccionario con los datos del formulario.
+        """
+        return {
+            'barcode': self.barcode_entry.get().strip(),
+            'qty': self.qty_entry.get().strip()
+        }
+
+    def clear_fields(self) -> None:
+        """Limpia los campos del formulario."""
+        self.barcode_entry.delete(0, 'end')
+        self.qty_entry.delete(0, 'end')
+        self.barcode_entry.focus()
+
+    def set_action_buttons_state(self, state: str) -> None:
+        """Configura el estado de los botones de acción.
+
+        Args:
+            state: El estado de los botones ("normal" o "disabled").
+        """
+        self.edit_button.configure(state=state)
+        self.delete_button.configure(state=state)

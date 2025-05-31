@@ -65,43 +65,114 @@ class SaleController:
         item = selected_items[0]
         values = self.sale_form.tree.item(item)['values']
         current_qty = int(values[2])  # La cantidad está en la tercera columna
-        barcode = values[0]  # El código de barras está en la primera columna
+        # El código de barras está en la primera columna
+        barcode = str(values[0])
 
-        # Mostrar diálogo para editar cantidad
-        new_qty = self._show_qty_dialog(current_qty)
-        if new_qty is not None and new_qty != current_qty:
+        # Cargar datos en el formulario
+        self.sale_form.clear_fields()
+        self.sale_form.barcode_entry.insert(0, barcode)
+        self.sale_form.qty_entry.insert(0, str(current_qty))
+        self.sale_form.barcode_entry.configure(state="disabled")
+        self.sale_form.qty_entry.focus()
+
+        # Función para guardar la edición
+        def save_edit_on_enter(event=None):
+            self._save_edit(barcode, current_qty)
+            # Desvincular el evento Enter después de guardar
+            self.sale_form.qty_entry.unbind('<Return>')
+
+        # Vincular el evento Enter al campo de cantidad
+        self.sale_form.qty_entry.bind('<Return>', save_edit_on_enter)
+
+        # Cambiar el botón de agregar por guardar
+        self.sale_form.add_button.configure(
+            text="Guardar",
+            command=save_edit_on_enter
+        )
+
+        # Deshabilitar botones de edición y eliminación
+        self.sale_form.set_action_buttons_state("disabled")
+
+    def _save_edit(self, old_barcode: str, old_qty: int) -> None:
+        """Guarda los cambios de la edición.
+
+        Args:
+            old_barcode: El código de barras original.
+            old_qty: La cantidad original.
+        """
+        try:
+            # Obtener datos del formulario
+            data = self.sale_form.get_item_data()
+            new_qty = int(data['qty'])
+            barcode = str(data['barcode'])
+
+            if new_qty <= 0:
+                messagebox.showerror("Error", "La cantidad debe ser mayor a 0")
+                return
+
             # Obtener el producto de la base de datos
             product = self.db.get_product_by_barcode(barcode)
-            if product:
-                # Calcular la diferencia de cantidad
-                qty_diff = new_qty - current_qty
-                # Verificar si hay suficiente stock disponible
-                available_stock = self._get_available_stock(barcode)
-                if available_stock >= qty_diff:
-                    try:
-                        # Actualizar el stock temporal
-                        self.temp_stock[barcode] = self.temp_stock.get(
-                            barcode, 0) + qty_diff
+            if not product:
+                messagebox.showerror("Error", "Producto no encontrado")
+                return
 
-                        # Actualizar la cantidad en la lista de items
-                        for item in self.items:
-                            if item['barcode'] == barcode:
-                                # Actualizar cantidad y subtotal
-                                item['qty'] = new_qty
-                                item['subtotal'] = new_qty * \
-                                    float(item['price'])
-                                break
+            # Liberar el stock temporal actual
+            if barcode in self.temp_stock:
+                self.temp_stock[barcode] -= old_qty
+                if self.temp_stock[barcode] <= 0:
+                    del self.temp_stock[barcode]
 
-                        # Actualizar la tabla
-                        self._update_table()
-                    except Exception as e:
-                        messagebox.showerror(
-                            "Error", f"Error al actualizar la cantidad: {str(e)}")
-                else:
-                    messagebox.showerror(
-                        "Error",
-                        f"No hay suficiente stock disponible\nStock disponible: {available_stock}"
+            # Verificar si hay suficiente stock disponible para la nueva cantidad
+            available_stock = product.stock
+
+            if available_stock >= new_qty:
+                try:
+                    # Actualizar el stock temporal con la nueva cantidad
+                    self.temp_stock[barcode] = self.temp_stock.get(
+                        barcode, 0) + new_qty
+
+                    # Actualizar la cantidad en la lista de items
+                    item_updated = False
+
+                    for item in self.items:
+                        if str(item['barcode']) == barcode:
+                            # Actualizar cantidad y subtotal
+                            item['qty'] = new_qty
+                            item['subtotal'] = new_qty * float(item['price'])
+                            item_updated = True
+                            break
+
+                    if not item_updated:
+                        return
+
+                    # Actualizar la tabla y el total
+                    self._update_table()
+
+                    # Restaurar el formulario
+                    self.sale_form.clear_fields()
+                    self.sale_form.barcode_entry.configure(state="normal")
+                    self.sale_form.add_button.configure(
+                        text="Agregar",
+                        command=self.add_item
                     )
+
+                    # Deshabilitar botones de acción
+                    self.sale_form.set_action_buttons_state("disabled")
+
+                    # Limpiar la selección de la tabla
+                    for item in self.sale_form.tree.selection():
+                        self.sale_form.tree.selection_remove(item)
+
+                except Exception as e:
+                    messagebox.showerror(
+                        "Error", f"Error al actualizar la cantidad: {str(e)}")
+            else:
+                messagebox.showerror(
+                    "Error",
+                    f"No hay suficiente stock disponible\nStock disponible: {available_stock}"
+                )
+        except ValueError:
+            messagebox.showerror("Error", "Ingrese una cantidad válida")
 
     def delete_item(self) -> None:
         """Elimina el item seleccionado de la venta."""
@@ -131,29 +202,6 @@ class SaleController:
             # Deshabilitar botones
             self.sale_form.edit_button.configure(state="disabled")
             self.sale_form.delete_button.configure(state="disabled")
-
-    def _show_qty_dialog(self, current_qty: int) -> int | None:
-        """Muestra un diálogo para editar la cantidad.
-
-        Args:
-            current_qty: La cantidad actual del producto.
-
-        Returns:
-            La nueva cantidad si se ingresó una válida, None en caso contrario.
-        """
-        from tkinter import simpledialog
-        try:
-            new_qty = simpledialog.askinteger(
-                "Editar Cantidad",
-                "Ingrese la nueva cantidad:",
-                initialvalue=current_qty,
-                minvalue=1
-            )
-            if new_qty is not None and new_qty > 0:
-                return new_qty
-            return None
-        except:
-            return None
 
     def add_item(self):
         # Obtener y limpiar los valores
@@ -235,7 +283,7 @@ class SaleController:
             self.sale_form.tree.delete(item)
 
         # Insertar los items actualizados
-        for item in self.items:
+        for i, item in enumerate(self.items):
             # Asegurarse de que los valores sean del tipo correcto
             qty = int(item['qty'])
             price = float(item['price'])
@@ -251,17 +299,23 @@ class SaleController:
                 f"${price:.2f}",
                 f"${subtotal:.2f}"
             )
-            self.sale_form.tree.insert('', 'end', values=values)
+            # Insertar con tags para alternar colores
+            self.sale_form.tree.insert('', 'end', values=values, tags=(
+                'evenrow' if i % 2 == 0 else 'oddrow',))
+
+        # Configurar colores alternados
+        self.sale_form.tree.tag_configure('evenrow', background='#ecf0f1')
+        self.sale_form.tree.tag_configure('oddrow', background='white')
 
         # Actualizar el total
-        self._update_total()
-
-    def _update_total(self):
-        """Actualiza el total de la venta."""
-        total = 0
-        for item in self.items:
-            total += float(item['subtotal'])
+        total = sum(float(item['subtotal']) for item in self.items)
         self.sale_form.total_label.config(text=f"Total: ${total:.2f}")
+
+        # Actualizar el estado de los botones
+        self.sale_form.set_action_buttons_state("disabled")
+
+        # Forzar la actualización de la interfaz
+        self.sale_form.update_idletasks()
 
     def _clear_form(self):
         # Limpiar campos

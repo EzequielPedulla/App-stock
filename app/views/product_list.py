@@ -89,11 +89,14 @@ class ProductForm(ttk.LabelFrame):
             # Habilitar en modo normal
             self.barcode_entry.configure(state='normal')
 
-    def set_action_buttons_state(self, enabled):
-        state = "normal" if enabled else "disabled"
+    def set_action_buttons_state(self, state: str) -> None:
+        """Configura el estado de los botones de acción.
+
+        Args:
+            state: El estado de los botones ("normal" o "disabled").
+        """
         self.edit_button.configure(state=state)
         self.delete_button.configure(state=state)
-        print(f"Estado de los botones: {state}")  # Para debug
 
     def cancel_edit(self):
         self.clear_fields()
