@@ -20,6 +20,8 @@ class SaleController:
         self.sale_form.delete_button.configure(command=self.delete_item)
         # Conectar evento de selección en la tabla
         self.sale_form.tree.bind('<<TreeviewSelect>>', self._on_select_item)
+        # Conectar evento de confirmación de venta
+        self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
 
     def _on_select_item(self, event) -> None:
         """Maneja el evento cuando se selecciona un item en la tabla.
