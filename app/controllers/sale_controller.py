@@ -1,6 +1,7 @@
 from ..models.database import Database
 from ..models.product import Product
 from tkinter import messagebox
+import datetime
 
 
 class SaleController:
@@ -326,13 +327,38 @@ class SaleController:
         # Enfocar el campo de código de barras
         self.sale_form.barcode_entry.focus()
 
-    def confirm_sale(self):
-        """Confirma la venta y actualiza el stock en la base de datos."""
+    def confirm_sale(self) -> bool:
+        """Confirma la venta, registra la venta y sus detalles, y actualiza el stock en la base de datos.
+
+        Returns:
+            bool: True si la venta se realizó correctamente, False en caso contrario.
+        """
         if not self.items:
             messagebox.showerror("Error", "No hay productos en la venta")
             return False
 
         try:
+            # Obtener datos de pago
+            paid = getattr(self.sale_form, 'paid', 0.0)
+            change = getattr(self.sale_form, 'change', 0.0)
+            total = sum(float(item['subtotal']) for item in self.items)
+            date = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
+
+            # Registrar la venta en la base de datos
+            sale_id = self.db.add_sale(
+                date=date, total=total, paid=paid, change=change)
+
+            # Registrar los detalles de la venta
+            for item in self.items:
+                product = self.db.get_product_by_barcode(item['barcode'])
+                if product:
+                    self.db.add_sale_detail(
+                        sale_id=sale_id,
+                        product_id=product.id,
+                        quantity=int(item['qty']),
+                        unit_price=float(item['price'])
+                    )
+
             # Actualizar el stock en la base de datos
             for barcode, qty in self.temp_stock.items():
                 product = self.db.get_product_by_barcode(barcode)
@@ -349,7 +375,8 @@ class SaleController:
             # Actualizar la lista de productos
             self._update_product_list()
 
-            messagebox.showinfo("Éxito", "Venta realizada correctamente")
+            messagebox.showinfo(
+                "Éxito", f"Venta realizada correctamente.\nVuelto entregado: ${change:.2f}")
             return True
         except Exception as e:
             messagebox.showerror(

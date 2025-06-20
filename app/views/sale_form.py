@@ -8,6 +8,8 @@ class SaleForm(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent, padding=20)
         self._payment_dialog = None  # Variable para controlar la ventana de pago
+        self.paid = 0.0  # Monto pagado por el cliente
+        self.change = 0.0  # Vuelto entregado al cliente
         self._create_widgets()
 
     def _create_widgets(self):
@@ -261,6 +263,8 @@ class SaleForm(ttk.Frame):
                     messagebox.showerror(
                         "Error", "El monto pagado es insuficiente")
                     return
+                self.paid = paid
+                self.change = paid - total
                 self._payment_dialog.destroy()
                 self._payment_dialog = None
                 self.event_generate("<<ConfirmSale>>")

@@ -199,3 +199,7 @@ class ProductList(ttk.LabelFrame):
         # Configurar colores alternados
         self.tabla.tag_configure('evenrow', background='#ecf0f1')
         self.tabla.tag_configure('oddrow', background='white')
+
+    def refresh(self) -> None:
+        """Actualiza la lista de productos en la vista. Puedes implementar la lógica real aquí."""
+        self.load_products([])
