@@ -10,13 +10,13 @@ class Product:
         return (self.barcode, self.name, self.price, self.stock)
 
     @staticmethod
-    def from_db_tuple(tuple_data):
+    def from_db_dict(dict_data):
         return Product(
-            id=tuple_data[0],
-            barcode=tuple_data[1],
-            name=tuple_data[2],
-            price=tuple_data[3],
-            stock=tuple_data[4]
+            id=dict_data['id'],
+            barcode=dict_data['barcode'],
+            name=dict_data['name'],
+            price=float(dict_data['price']),
+            stock=dict_data['stock']
         )
 
     @staticmethod
