@@ -21,6 +21,8 @@ class SaleController:
         self.sale_form.delete_button.configure(command=self.delete_item)
         # Conectar evento de selección en la tabla
         self.sale_form.tree.bind('<<TreeviewSelect>>', self._on_select_item)
+        # Conectar doble clic para seleccionar
+        self.sale_form.tree.bind('<Double-1>', self._on_double_click)
         # Conectar evento de confirmación de venta
         self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
 
@@ -35,6 +37,20 @@ class SaleController:
         state = "normal" if selected_items else "disabled"
         self.sale_form.edit_button.configure(state=state)
         self.sale_form.delete_button.configure(state=state)
+
+    def _on_double_click(self, event) -> None:
+        """Maneja el evento de doble clic en la tabla.
+
+        Args:
+            event: El evento de doble clic.
+        """
+        # Asegurar que el item esté seleccionado
+        item = self.sale_form.tree.identify('item', event.x, event.y)
+        if item:
+            self.sale_form.tree.selection_set(item)
+            # Habilitar botones
+            self.sale_form.edit_button.configure(state="normal")
+            self.sale_form.delete_button.configure(state="normal")
 
     def _update_product_list(self):
         """Actualiza la lista de productos si está disponible."""
@@ -181,6 +197,8 @@ class SaleController:
         """Elimina el item seleccionado de la venta."""
         selected_items = self.sale_form.tree.selection()
         if not selected_items:
+            messagebox.showwarning(
+                "Advertencia", "Por favor selecciona un producto para eliminar.")
             return
 
         # Obtener el item seleccionado
@@ -191,6 +209,9 @@ class SaleController:
 
         # Confirmar eliminación
         if messagebox.askyesno("Confirmar", "¿Desea eliminar este producto de la venta?"):
+            print(f"Eliminando producto: {barcode}, cantidad: {qty}")
+            print(f"Items antes de eliminar: {len(self.items)}")
+
             # Liberar el stock temporal
             if barcode in self.temp_stock:
                 self.temp_stock[barcode] -= qty
@@ -198,13 +219,26 @@ class SaleController:
                     del self.temp_stock[barcode]
 
             # Eliminar el item de la lista
+            print(
+                f"Buscando para eliminar: '{barcode}' (tipo: {type(barcode)})")
+            for item in self.items:
+                print(
+                    f"  Item en lista: '{item['barcode']}' (tipo: {type(item['barcode'])})")
+
             self.items = [
-                item for item in self.items if item['barcode'] != barcode]
+                item for item in self.items if str(item['barcode']) != str(barcode)]
+
+            print(f"Items después de eliminar: {len(self.items)}")
+
             # Actualizar la tabla y el total
             self._update_table()
-            # Deshabilitar botones
-            self.sale_form.edit_button.configure(state="disabled")
-            self.sale_form.delete_button.configure(state="disabled")
+
+            # Deshabilitar botones si no hay productos
+            if not self.items:
+                self.sale_form.edit_button.configure(state="disabled")
+                self.sale_form.delete_button.configure(state="disabled")
+
+            messagebox.showinfo("Éxito", "Producto eliminado de la venta.")
 
     def add_item(self):
         # Obtener y limpiar los valores
@@ -281,6 +315,8 @@ class SaleController:
 
     def _update_table(self):
         """Actualiza la tabla con los items actuales."""
+        print(f"Actualizando tabla con {len(self.items)} items")
+
         # Limpiar la tabla
         for item in self.sale_form.tree.get_children():
             self.sale_form.tree.delete(item)
