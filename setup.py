@@ -7,7 +7,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "ttkbootstrap>=1.10.1",
-        "sqlite3",
+        "pymysql>=1.0.2",
     ],
     python_requires=">=3.8",
     author="Eze",
