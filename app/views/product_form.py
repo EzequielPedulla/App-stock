@@ -1,41 +1,47 @@
 import ttkbootstrap as ttk
 
 
-class ProductForm(ttk.LabelFrame):
+class ProductForm(ttk.Frame):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, text="Agregar Producto", padding=20, **kwargs)
+        super().__init__(parent, **kwargs)
         self.pack(fill="x", pady=(0, 20))
         self._create_widgets()
         self.editing_mode = False
 
     def _create_widgets(self):
+        # Título del formulario
+        self.title_label = ttk.Label(self, text="Agregar Producto",
+                                     font=("Segoe UI", 16, "bold"))
+        self.title_label.grid(row=0, column=0, columnspan=2,
+                              pady=(0, 20), sticky='w')
+
         # Configurar el grid
         self.columnconfigure(1, weight=1)
 
         # Campos del formulario
         ttk.Label(self, text="Código de barras",
-                  font=("Segoe UI", 11)).grid(row=0, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 11)).grid(row=1, column=0, pady=10, sticky='w')
         self.barcode_entry = ttk.Entry(self)
-        self.barcode_entry.grid(row=0, column=1, padx=(20, 0), sticky='ew')
+        self.barcode_entry.grid(row=1, column=1, padx=(20, 0), sticky='ew')
 
         ttk.Label(self, text="Nombre",
-                  font=("Segoe UI", 11)).grid(row=1, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 11)).grid(row=2, column=0, pady=10, sticky='w')
         self.name_entry = ttk.Entry(self)
-        self.name_entry.grid(row=1, column=1, padx=(20, 0), sticky='ew')
+        self.name_entry.grid(row=2, column=1, padx=(20, 0), sticky='ew')
 
         ttk.Label(self, text="Precio",
-                  font=("Segoe UI", 11)).grid(row=2, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 11)).grid(row=3, column=0, pady=10, sticky='w')
         self.price_entry = ttk.Entry(self)
-        self.price_entry.grid(row=2, column=1, padx=(20, 0), sticky='ew')
+        self.price_entry.grid(row=3, column=1, padx=(20, 0), sticky='ew')
 
         ttk.Label(self, text="Stock",
-                  font=("Segoe UI", 11)).grid(row=3, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 11)).grid(row=4, column=0, pady=10, sticky='w')
         self.stock_entry = ttk.Entry(self)
-        self.stock_entry.grid(row=3, column=1, padx=(20, 0), sticky='ew')
+        self.stock_entry.grid(row=4, column=1, padx=(20, 0), sticky='ew')
 
         # Frame para los botones
         frame_botones = ttk.Frame(self)
-        frame_botones.grid(row=4, column=1, pady=20, sticky='e')
+        frame_botones.grid(row=5, column=1, pady=20, sticky='e')
 
         self.edit_button = ttk.Button(frame_botones, text="Editar",
                                       bootstyle="warning", width=15, state="enabled")
@@ -76,11 +82,11 @@ class ProductForm(ttk.LabelFrame):
     def set_editing_mode(self, editing):
         self.editing_mode = editing
         if editing:
-            self.configure(text="Editar Producto")
+            self.title_label.config(text="Editar Producto")
             self.save_button.configure(text="Guardar Cambios")
             self.cancel_button.pack(side='left', padx=5)
         else:
-            self.configure(text="Agregar Producto")
+            self.title_label.config(text="Agregar Producto")
             self.save_button.configure(text="Guardar")
             self.cancel_button.pack_forget()
 

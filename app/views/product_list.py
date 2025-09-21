@@ -103,13 +103,18 @@ class ProductForm(ttk.LabelFrame):
         self.set_action_buttons_state(False)
 
 
-class ProductList(ttk.LabelFrame):
+class ProductList(ttk.Frame):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, text="Lista de Productos", padding=20, **kwargs)
+        super().__init__(parent, **kwargs)
         self.pack(fill=BOTH, expand=True)
         self._create_widgets()
 
     def _create_widgets(self):
+        # Título de la lista
+        title_label = ttk.Label(self, text="Lista de Productos",
+                                font=("Segoe UI", 16, "bold"))
+        title_label.pack(pady=(0, 20), anchor='w')
+
         # Configurar el estilo antes de crear la tabla
         style = ttk.Style()
 
@@ -120,7 +125,7 @@ class ProductList(ttk.LabelFrame):
             foreground="black",
             rowheight=35,  # Reducido de 50 a 35
             fieldbackground="white",
-            borderwidth=1,  # Reducido de 2 a 1
+            borderwidth=0,  # Sin borde
             font=('Segoe UI', 11)  # Reducido de 14 a 11
         )
 
@@ -130,7 +135,7 @@ class ProductList(ttk.LabelFrame):
             background="#2c3e50",
             foreground="white",
             relief="flat",
-            borderwidth=1,  # Reducido de 2 a 1
+            borderwidth=0,  # Sin borde
             font=('Segoe UI', 12, 'bold')  # Reducido de 16 a 12
         )
 
@@ -173,8 +178,8 @@ class ProductList(ttk.LabelFrame):
         self.tabla.configure(yscrollcommand=scrollbar.set)
 
         # Empaquetar la tabla y el scrollbar
-        self.tabla.pack(side=LEFT, fill=BOTH, expand=True)
-        scrollbar.pack(side=RIGHT, fill=Y)
+        self.tabla.pack(side=LEFT, fill=BOTH, expand=True, padx=20, pady=20)
+        scrollbar.pack(side=RIGHT, fill=Y, pady=20)
 
     def load_products(self, products):
         # Limpiar tabla

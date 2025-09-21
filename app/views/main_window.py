@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+import tkinter as tk
 from .product_form import ProductForm
 from .product_list import ProductList
 from .sale_form import SaleForm
@@ -60,18 +61,16 @@ class MainWindow(ttk.Window):
         ttk.Frame(menu_container, bootstyle="primary").pack(
             expand=True, fill=Y)
 
-        # Frame principal con fondo oscuro
-        self.frame_contenido = ttk.Frame(self, bootstyle="dark")
+        # Frame principal con fondo blanco puro
+        self.frame_contenido = tk.Frame(self, bg="white")
         self.frame_contenido.pack(side=LEFT, expand=True, fill=BOTH)
 
-        # Contenedor interno con padding y fondo oscuro
-        self.contenido_interno = ttk.Frame(
-            self.frame_contenido, bootstyle="dark")
+        # Contenedor interno con padding y fondo blanco puro
+        self.contenido_interno = tk.Frame(self.frame_contenido, bg="white")
         self.contenido_interno.pack(padx=30, pady=30, fill=BOTH, expand=True)
 
         # Frame para productos (formulario + lista)
-        self.productos_frame = ttk.Frame(
-            self.contenido_interno, bootstyle="dark")
+        self.productos_frame = tk.Frame(self.contenido_interno, bg="white")
         self.productos_frame.pack(fill=BOTH, expand=True)
         self.product_form = ProductForm(self.productos_frame)
         self.product_list = ProductList(self.productos_frame)
@@ -79,8 +78,7 @@ class MainWindow(ttk.Window):
         self.product_list.pack(side="top", fill="both", expand=True)
 
         # Frame para ventas (solo se muestra cuando corresponde)
-        self.ventas_frame = ttk.Frame(
-            self.contenido_interno, bootstyle="dark")
+        self.ventas_frame = tk.Frame(self.contenido_interno, bg="white")
         self.sale_form = SaleForm(self.ventas_frame)
         self.sale_form.pack(fill=BOTH, expand=True)
 
