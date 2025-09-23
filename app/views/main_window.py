@@ -82,6 +82,8 @@ class MainWindow(ttk.Window):
         self.sale_form = SaleForm(self.ventas_frame)
         self.sale_form.pack(fill=BOTH, expand=True)
 
+        self.reports_frame = tk.Frame(self.contenido_interno, bg="white")
+
         self.show_products()
 
     def _create_menu_buttons(self, container):
@@ -89,7 +91,7 @@ class MainWindow(ttk.Window):
         buttons_data = [
             ("📦", "Productos", self.show_products),
             ("💰", "Ventas", self.show_sales),
-            # ("📊", "Reportes", self._on_reportes_click),
+            ("📊", "Reportes", self.show_reports),
             # ("⚙️", "Configuración", self._on_config_click)
         ]
 
@@ -116,6 +118,12 @@ class MainWindow(ttk.Window):
         self.productos_frame.pack_forget()
         self.ventas_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Ventas")
+
+    def show_reports(self):
+        self.productos_frame.pack_forget()
+        self.ventas_frame.pack_forget()
+        self.reports_frame.pack(fill=BOTH, expand=True)
+        self.titulo_label.config(text="Reportes")
 
     # def _on_reportes_click(self):
     #     """Maneja el evento de clic en el botón de reportes."""
