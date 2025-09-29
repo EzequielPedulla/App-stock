@@ -7,9 +7,11 @@ from tkinter import messagebox
 class SaleForm(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent, padding=20)
-        self._payment_dialog = None  # Variable para controlar la ventana de pago
-        self.paid = 0.0  # Monto pagado por el cliente
-        self.change = 0.0  # Vuelto entregado al cliente
+        self._payment_dialog = None
+        self.paid = 0.0
+        self.change = 0.0
+        self._original_items = []  # Cache de items originales
+        self._is_filtering = False  # Flag para saber si estamos filtrando
         self._create_widgets()
 
     def _create_widgets(self):
@@ -49,18 +51,18 @@ class SaleForm(ttk.Frame):
 
         # Botones de acción
         self.add_button = ttk.Button(
-            card, text="Agregar", style="primary.TButton", width=15)
+            card, text="Agregar", bootstyle="primary", width=15)
         self.add_button.grid(row=2, column=2, sticky=tk.E,
                              padx=(10, 0), pady=5)
 
         self.edit_button = ttk.Button(
-            card, text="Editar", style="warning.TButton", width=15)
+            card, text="Editar", bootstyle="warning", width=15)
         self.edit_button.grid(row=2, column=3, sticky=tk.E,
                               padx=(10, 0), pady=5)
         self.edit_button.configure(state="disabled")
 
         self.delete_button = ttk.Button(
-            card, text="Eliminar", style="danger.TButton", width=15)
+            card, text="Eliminar", bootstyle="danger", width=15)
         self.delete_button.grid(row=2, column=4, sticky=tk.E,
                                 padx=(10, 0), pady=5)
         self.delete_button.configure(state="disabled")
@@ -72,6 +74,31 @@ class SaleForm(ttk.Frame):
         prod_sel_label = ttk.Label(
             self, text="Productos Seleccionados", font=("Segoe UI", 14, "bold"))
         prod_sel_label.pack(anchor=tk.W, pady=(10, 0))
+
+        # ===== FRAME DE BÚSQUEDA =====
+        search_frame = ttk.Frame(self)
+        search_frame.pack(fill='x', pady=(10, 10))
+
+        ttk.Label(search_frame, text="🔍 Buscar en carrito:",
+                  font=("Segoe UI", 11)).pack(side='left', padx=(0, 10))
+
+        self.search_var = ttk.StringVar()
+        self.search_var.trace('w', self._on_search)
+
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var,
+                                 font=("Segoe UI", 11), width=40)
+        search_entry.pack(side='left', fill='x', expand=True)
+
+        # Botón para limpiar búsqueda
+        clear_btn = ttk.Button(search_frame, text="✕", width=3,
+                               bootstyle="secondary",
+                               command=self._clear_search)
+        clear_btn.pack(side='left', padx=(5, 0))
+
+        # Label informativo
+        self.info_label = ttk.Label(search_frame, text="",
+                                    font=("Segoe UI", 9), foreground="gray")
+        self.info_label.pack(side='left', padx=(10, 0))
 
         # Frame para la tabla
         table_frame = ttk.Frame(self, style="Card.TFrame", padding=10)
@@ -114,7 +141,7 @@ class SaleForm(ttk.Frame):
             table_frame,
             columns=columns,
             show="headings",
-            height=6,
+            height=3,
             style="Custom.Treeview"
         )
 
@@ -155,7 +182,7 @@ class SaleForm(ttk.Frame):
             text="Total: $0.00",
             font=("Segoe UI", 18, "bold"),
             anchor=tk.E,
-            width=15  # Asegura un ancho mínimo para el total
+            width=15
         )
         self.total_label.pack(side=tk.RIGHT)
 
@@ -163,7 +190,7 @@ class SaleForm(ttk.Frame):
         self.confirm_button = ttk.Button(
             bottom_frame,
             text="Confirmar Venta",
-            style="success.TButton",
+            bootstyle="success",
             width=18,
             command=self._show_payment_dialog
         )
@@ -171,6 +198,81 @@ class SaleForm(ttk.Frame):
 
         # Vincular la tecla Enter a la ventana principal
         self.bind_all('<Return>', self._on_enter_pressed)
+
+    def _save_current_items(self):
+        """Guarda los items actuales del Treeview en el cache"""
+        if not self._is_filtering:  # Solo guardar si NO estamos filtrando
+            self._original_items = []
+            for item_id in self.tree.get_children():
+                values = self.tree.item(item_id)['values']
+                self._original_items.append(values)
+
+    def _on_search(self, *args):
+        """Se ejecuta cada vez que el usuario escribe en el buscador"""
+        search_term = self.search_var.get().lower().strip()
+
+        if not search_term:
+            # Si no hay búsqueda, restaurar todos los items originales
+            self._is_filtering = False
+            self._restore_items()
+            self.info_label.configure(text="")
+        else:
+            # Guardar items originales antes de filtrar (solo la primera vez)
+            if not self._is_filtering:
+                self._save_current_items()
+                self._is_filtering = True
+
+            # Filtrar items
+            filtered = []
+            for values in self._original_items:
+                barcode = str(values[0]).lower()
+                name = str(values[1]).lower()
+                if search_term in barcode or search_term in name:
+                    filtered.append(values)
+
+            # Mostrar items filtrados
+            self._display_filtered_items(filtered)
+
+            # Actualizar info
+            if filtered:
+                self.info_label.configure(
+                    text=f"Mostrando {len(filtered)} de {len(self._original_items)} productos")
+            else:
+                self.info_label.configure(text="No se encontraron productos")
+
+    def _clear_search(self):
+        """Limpia el campo de búsqueda"""
+        self.search_var.set("")
+
+    def _restore_items(self):
+        """Restaura todos los items originales al Treeview"""
+        # Limpiar tabla
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # Restaurar items originales
+        for i, values in enumerate(self._original_items):
+            self.tree.insert("", END, values=values,
+                             tags=('evenrow' if i % 2 == 0 else 'oddrow',))
+
+        # Colores alternados
+        self.tree.tag_configure('evenrow', background='#ecf0f1')
+        self.tree.tag_configure('oddrow', background='white')
+
+    def _display_filtered_items(self, items):
+        """Muestra los items filtrados en el Treeview"""
+        # Limpiar tabla
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # Cargar items filtrados
+        for i, values in enumerate(items):
+            self.tree.insert("", END, values=values,
+                             tags=('evenrow' if i % 2 == 0 else 'oddrow',))
+
+        # Colores alternados
+        self.tree.tag_configure('evenrow', background='#ecf0f1')
+        self.tree.tag_configure('oddrow', background='white')
 
     def _show_payment_dialog(self) -> None:
         """Muestra el diálogo para ingresar el monto pagado y calcular el vuelto."""
@@ -183,8 +285,8 @@ class SaleForm(ttk.Frame):
         self._payment_dialog.title("Pago")
         self._payment_dialog.geometry("400x300")
         self._payment_dialog.resizable(False, False)
-        self._payment_dialog.transient(self)  # Hacer la ventana modal
-        self._payment_dialog.grab_set()  # Hacer la ventana modal
+        self._payment_dialog.transient(self)
+        self._payment_dialog.grab_set()
 
         # Centrar la ventana
         self._payment_dialog.update_idletasks()
@@ -278,14 +380,14 @@ class SaleForm(ttk.Frame):
         ttk.Button(
             button_frame,
             text="Confirmar",
-            style="success.TButton",
+            bootstyle="success",
             command=confirm_payment
         ).pack(side=RIGHT, padx=(5, 0))
 
         ttk.Button(
             button_frame,
             text="Cancelar",
-            style="secondary.TButton",
+            bootstyle="secondary",
             command=on_closing
         ).pack(side=RIGHT)
 
@@ -293,11 +395,7 @@ class SaleForm(ttk.Frame):
         self._payment_dialog.protocol("WM_DELETE_WINDOW", on_closing)
 
     def _on_barcode_return(self, event) -> None:
-        """Maneja el evento cuando se presiona Enter en el campo de código de barras.
-
-        Args:
-            event: El evento de tecla.
-        """
+        """Maneja el evento cuando se presiona Enter en el campo de código de barras."""
         self.event_generate("<<AddItem>>")
 
     def _on_enter_pressed(self, event) -> None:
@@ -311,11 +409,7 @@ class SaleForm(ttk.Frame):
             self._show_payment_dialog()
 
     def get_item_data(self) -> dict:
-        """Obtiene los datos del formulario.
-
-        Returns:
-            dict: Diccionario con los datos del formulario.
-        """
+        """Obtiene los datos del formulario."""
         return {
             'barcode': self.barcode_entry.get().strip(),
             'qty': self.qty_entry.get().strip()
@@ -328,10 +422,6 @@ class SaleForm(ttk.Frame):
         self.barcode_entry.focus()
 
     def set_action_buttons_state(self, state: str) -> None:
-        """Configura el estado de los botones de acción.
-
-        Args:
-            state: El estado de los botones ("normal" o "disabled").
-        """
+        """Configura el estado de los botones de acción."""
         self.edit_button.configure(state=state)
         self.delete_button.configure(state=state)

@@ -315,7 +315,6 @@ class SaleController:
 
     def _update_table(self):
         """Actualiza la tabla con los items actuales."""
-        print(f"Actualizando tabla con {len(self.items)} items")
 
         # Limpiar la tabla
         for item in self.sale_form.tree.get_children():
