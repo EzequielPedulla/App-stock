@@ -5,12 +5,13 @@ import datetime
 
 
 class SaleController:
-    def __init__(self, sale_form, product_list=None):
+    def __init__(self, sale_form, product_list=None, report_controller=None):
         self.sale_form = sale_form
-        self.product_list = product_list  # Referencia a la lista de productos
+        self.product_list = product_list
+        self.report_controller = report_controller
         self.db = Database()
-        self.items = []  # Lista de productos seleccionados (dicts)
-        self.temp_stock = {}  # Diccionario para mantener el stock temporal
+        self.items = []
+        self.temp_stock = {}
         self._connect_events()
 
     def _connect_events(self):
@@ -201,39 +202,31 @@ class SaleController:
                 "Advertencia", "Por favor selecciona un producto para eliminar.")
             return
 
-        # Obtener el item seleccionado
         item = selected_items[0]
         values = self.sale_form.tree.item(item)['values']
-        barcode = values[0]  # El código de barras está en la primera columna
-        qty = int(values[2])  # La cantidad está en la tercera columna
+        barcode = values[0]
+        qty = int(values[2])
 
-        # Confirmar eliminación
         if messagebox.askyesno("Confirmar", "¿Desea eliminar este producto de la venta?"):
-            print(f"Eliminando producto: {barcode}, cantidad: {qty}")
-            print(f"Items antes de eliminar: {len(self.items)}")
+            # print(f"Eliminando producto: {barcode}, cantidad: {qty}")
+            # print(f"Items antes de eliminar: {len(self.items)}")
 
-            # Liberar el stock temporal
             if barcode in self.temp_stock:
                 self.temp_stock[barcode] -= qty
                 if self.temp_stock[barcode] <= 0:
                     del self.temp_stock[barcode]
 
-            # Eliminar el item de la lista
-            print(
-                f"Buscando para eliminar: '{barcode}' (tipo: {type(barcode)})")
-            for item in self.items:
-                print(
-                    f"  Item en lista: '{item['barcode']}' (tipo: {type(item['barcode'])})")
+            # print(f"Buscando para eliminar: '{barcode}' (tipo: {type(barcode)})")
+            # for item in self.items:
+            #     print(f"  Item en lista: '{item['barcode']}' (tipo: {type(item['barcode'])})")
 
             self.items = [
                 item for item in self.items if str(item['barcode']) != str(barcode)]
 
-            print(f"Items después de eliminar: {len(self.items)}")
+            # print(f"Items después de eliminar: {len(self.items)}")
 
-            # Actualizar la tabla y el total
             self._update_table()
 
-            # Deshabilitar botones si no hay productos
             if not self.items:
                 self.sale_form.edit_button.configure(state="disabled")
                 self.sale_form.delete_button.configure(state="disabled")
@@ -412,6 +405,11 @@ class SaleController:
 
             messagebox.showinfo(
                 "Éxito", f"Venta realizada correctamente.\nVuelto entregado: ${change:.2f}")
+
+            # Actualizar reportes si existe el controller
+            if self.report_controller:
+                self.report_controller.refresh()
+
             return True
         except Exception as e:
             messagebox.showerror(

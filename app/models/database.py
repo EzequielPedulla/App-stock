@@ -4,17 +4,33 @@ from config import MYSQL_CONFIG
 
 
 class Database:
+    _instance = None
+    _connection = None
+
+    def __new__(cls):
+        """Implementa el patrón Singleton para asegurar una única instancia."""
+        if cls._instance is None:
+            cls._instance = super(Database, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.connection = pymysql.connect(
-            host=MYSQL_CONFIG['host'],
-            port=MYSQL_CONFIG['port'],
-            user=MYSQL_CONFIG['user'],
-            password=MYSQL_CONFIG['password'],
-            database=MYSQL_CONFIG['database'],
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        self.cursor = self.connection.cursor()
-        self.create_tables()
+        """Inicializa la conexión solo si no existe."""
+        if Database._connection is None:
+            Database._connection = pymysql.connect(
+                host=MYSQL_CONFIG['host'],
+                port=MYSQL_CONFIG['port'],
+                user=MYSQL_CONFIG['user'],
+                password=MYSQL_CONFIG['password'],
+                database=MYSQL_CONFIG['database'],
+                cursorclass=pymysql.cursors.DictCursor,
+                autocommit=False  # Control manual de transacciones
+            )
+            self.connection = Database._connection
+            self.cursor = self.connection.cursor()
+            self.create_tables()
+        else:
+            self.connection = Database._connection
+            self.cursor = self.connection.cursor()
 
     def create_tables(self):
         self.cursor.execute('''
@@ -111,5 +127,22 @@ class Database:
         )
         self.connection.commit()
 
+    def execute_query(self, query, params=None):
+        """Ejecuta una consulta SELECT y retorna los resultados como lista de diccionarios"""
+        try:
+            # Crear un nuevo cursor para asegurar datos frescos
+            cursor = self.connection.cursor()
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            result = cursor.fetchall()
+            cursor.close()
+            return result
+        except Exception as e:
+            print(f"Error en consulta: {e}")
+            return []
+
     def __del__(self):
-        self.connection.close()
+        # No cerrar la conexión en el destructor ya que es compartida
+        pass
