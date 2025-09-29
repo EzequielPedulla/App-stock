@@ -154,5 +154,8 @@ class ProductList(ttk.Frame):
             self.info_label.configure(text=f"Total: {len(products)} productos")
 
     def refresh(self) -> None:
-        """Actualiza la lista de productos"""
-        self.load_products(self.all_products)
+        """Actualiza la lista de productos desde la base de datos"""
+        from ..models.database import Database
+        db = Database()
+        products = db.get_all_products()
+        self.load_products(products)

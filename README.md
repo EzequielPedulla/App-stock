@@ -53,3 +53,55 @@
 ### Base de Datos
 
 - **MySQL 5.7+** - Sistema de gestión de base de datos
+
+---
+
+## 🚀 Instalación y Configuración
+
+### 1. Clonar el repositorio
+
+```bash
+git clone <repository-url>
+cd App-Stock
+```
+
+### 2. Crear entorno virtual
+
+```bash
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+```
+
+### 3. Instalar dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto con:
+
+```env
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=tu_contraseña_aquí
+MYSQL_DATABASE=app_stock
+```
+
+> ⚠️ **IMPORTANTE**: Nunca subas el archivo `.env` al repositorio. Ya está incluido en `.gitignore`.
+
+### 5. Crear la base de datos
+
+```sql
+CREATE DATABASE app_stock;
+```
+
+Las tablas se crearán automáticamente al iniciar la aplicación.
+
+### 6. Ejecutar la aplicación
+
+```bash
+python main.py
+```

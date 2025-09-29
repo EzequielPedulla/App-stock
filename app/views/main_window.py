@@ -95,8 +95,7 @@ class MainWindow(ttk.Window):
         buttons_data = [
             ("📦", "Productos", self.show_products),
             ("💰", "Ventas", self.show_sales),
-            ("📊", "Reportes", self.show_reports),
-            # ("⚙️", "Configuración", self._on_config_click)
+            ("📊", "Reportes", self.show_reports)
         ]
 
         for icon, text, command in buttons_data:
@@ -130,11 +129,3 @@ class MainWindow(ttk.Window):
         self.ventas_frame.pack_forget()
         self.reports_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Reportes")
-
-    # def _on_reportes_click(self):
-    #     """Maneja el evento de clic en el botón de reportes."""
-    #     print("Reportes clicked")
-
-    # def _on_config_click(self):
-    #     """Maneja el evento de clic en el botón de configuración."""
-    #     print("Configuración clicked")

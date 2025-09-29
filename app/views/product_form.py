@@ -75,7 +75,7 @@ class ProductForm(ttk.Frame):
         self.price_entry.delete(0, 'end')
         self.stock_entry.delete(0, 'end')
         self.set_editing_mode(False)
-        self.set_action_buttons_state(False)
+        self.set_action_buttons_state("disabled")
         # Asegurar que esté habilitado al limpiar
         self.barcode_entry.configure(state='normal')
 
@@ -96,9 +96,10 @@ class ProductForm(ttk.Frame):
         Args:
             state: El estado de los botones ("normal" o "disabled").
         """
-        self.edit_button.configure(state=state)
-        self.delete_button.configure(state=state)
+        button_state = "normal" if state else "disabled"
+        self.edit_button.configure(state=button_state)
+        self.delete_button.configure(state=button_state)
 
     def cancel_edit(self):
         self.clear_fields()
-        self.set_action_buttons_state(False)
+        self.set_action_buttons_state("disabled")

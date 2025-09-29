@@ -19,8 +19,7 @@ class ProductController:
 
         # Cargar productos
         self.load_products()
-        self.product_form.set_action_buttons_state(
-            False)  # Deshabilitar al inicio
+        self.product_form.set_action_buttons_state("disabled")
 
     def save_product(self):
         try:
@@ -64,7 +63,7 @@ class ProductController:
             self.product_form.clear_fields()
             self.selected_product = None
             self.load_products()
-            self.product_form.set_action_buttons_state(False)
+            self.product_form.set_action_buttons_state("disabled")
 
         except ValueError as e:
             if "could not convert string to float" in str(e):
@@ -81,14 +80,13 @@ class ProductController:
     def load_products(self):
         products = self.db.get_all_products()
         self.product_list.load_products(products)
-        self.product_form.set_action_buttons_state(
-            False)  # Deshabilitar después de recargar
+        self.product_form.set_action_buttons_state("disabled")
 
     def on_select_product(self, event):
         selected_items = self.product_list.tabla.selection()
         if not selected_items:
             self.selected_product = None
-            self.product_form.set_action_buttons_state(False)
+            self.product_form.set_action_buttons_state("disabled")
             return
 
         # Obtener el item seleccionado
@@ -101,13 +99,9 @@ class ProductController:
 
         # Habilitar los botones si hay un producto seleccionado
         if self.selected_product:
-            self.product_form.set_action_buttons_state(True)
-            # Para debug
-            print(f"Producto seleccionado: {self.selected_product.name}")
+            self.product_form.set_action_buttons_state("normal")
         else:
-            self.product_form.set_action_buttons_state(False)
-            # Para debug
-            print(f"No se encontró el producto con código: {barcode}")
+            self.product_form.set_action_buttons_state("disabled")
 
     def start_edit(self):
         if not self.selected_product:
@@ -130,10 +124,6 @@ class ProductController:
 
             # Cambiar a modo edición
             self.product_form.set_editing_mode(True)
-            # Ya no deshabilitamos el código de barras
-            # Para debug
-            print(
-                f"Iniciando edición del producto: {self.selected_product.name}")
         except Exception as e:
             messagebox.showerror(
                 "Error", f"Error al iniciar la edición: {str(e)}")
@@ -151,15 +141,13 @@ class ProductController:
                 self.selected_product = None
                 self.product_form.clear_fields()
                 self.load_products()
-                self.product_form.set_action_buttons_state(False)
+                self.product_form.set_action_buttons_state("disabled")
                 messagebox.showinfo(
                     "Éxito", "Producto eliminado correctamente")
-                print("Producto eliminado exitosamente")  # Para debug
         except Exception as e:
             messagebox.showerror(
                 "Error", f"Error al eliminar el producto: {str(e)}")
-            print(f"Error al eliminar: {str(e)}")  # Para debug
 
     def cancel_edit(self):
         self.product_form.clear_fields()
-        self.product_form.set_action_buttons_state(False)
+        self.product_form.set_action_buttons_state("disabled")
