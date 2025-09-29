@@ -4,6 +4,7 @@ import tkinter as tk
 from .product_form import ProductForm
 from .product_list import ProductList
 from .sale_form import SaleForm
+from .report_form import ReportForm
 
 
 class MainWindow(ttk.Window):
@@ -84,6 +85,9 @@ class MainWindow(ttk.Window):
 
         self.reports_frame = tk.Frame(self.contenido_interno, bg="white")
 
+        self.report_form = ReportForm(self.reports_frame)
+        self.report_form.pack(fill=BOTH, expand=True)
+
         self.show_products()
 
     def _create_menu_buttons(self, container):
@@ -110,12 +114,14 @@ class MainWindow(ttk.Window):
     def show_products(self):
         """Muestra la sección de productos y actualiza el título."""
         self.ventas_frame.pack_forget()
+        self.reports_frame.pack_forget()  # <-- Agregar esta línea
         self.productos_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Productos")
 
     def show_sales(self):
         """Muestra la sección de ventas y actualiza el título."""
         self.productos_frame.pack_forget()
+        self.reports_frame.pack_forget()  # <-- Agregar esta línea
         self.ventas_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Ventas")
 
