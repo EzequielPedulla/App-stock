@@ -12,14 +12,16 @@ from ..services.export_service import ExportService
 class ReportController:
     """Controlador para gestionar reportes y exportaciones."""
 
-    def __init__(self, report_form: Any) -> None:
+    def __init__(self, report_form: Any, product_list: Any = None) -> None:
         """
         Inicializa el controlador de reportes.
 
         Args:
             report_form: Formulario de reportes (vista)
+            product_list: Lista de productos para refrescar después de anular ventas
         """
         self.report_form = report_form
+        self.product_list = product_list
         self.db = Database()
         self.export_service = ExportService()
         # Establecer la referencia del controlador en la vista
@@ -49,23 +51,23 @@ class ReportController:
 
     def _get_total_ventas(self) -> float:
         """
-        Suma todas las ventas de la base de datos.
+        Suma todas las ventas activas de la base de datos (excluye anuladas).
 
         Returns:
-            float: Total acumulado de ventas
+            float: Total acumulado de ventas activas
         """
-        query = "SELECT COALESCE(SUM(total), 0) as total FROM sales"
+        query = "SELECT COALESCE(SUM(total), 0) as total FROM sales WHERE status = 'active'"
         result = self.db.execute_query(query)
         return float(result[0]['total']) if result else 0.0
 
     def _get_ultima_venta(self) -> float:
         """
-        Obtiene el monto de la última venta.
+        Obtiene el monto de la última venta activa.
 
         Returns:
-            float: Monto de la última venta
+            float: Monto de la última venta activa
         """
-        query = "SELECT total FROM sales ORDER BY date DESC LIMIT 1"
+        query = "SELECT total FROM sales WHERE status = 'active' ORDER BY date DESC LIMIT 1"
         result = self.db.execute_query(query)
         return float(result[0]['total']) if result else 0.0
 
@@ -77,7 +79,7 @@ class ReportController:
             list: Lista de ventas con sus datos
         """
         query = """
-            SELECT id, date, total, paid, `change`
+            SELECT id, date, total, paid, `change`, status
             FROM sales
             ORDER BY date DESC
         """
@@ -270,4 +272,68 @@ class ReportController:
             messagebox.showerror(
                 "Error al generar ticket",
                 f"No se pudo generar el ticket:\n{str(e)}"
+            )
+
+    def cancel_sale(self, sale_id: int) -> None:
+        """
+        Anula una venta y reintegra el stock.
+
+        Args:
+            sale_id: ID de la venta a anular
+        """
+        # Verificar si la venta ya está anulada
+        query = "SELECT status FROM sales WHERE id = %s"
+        result = self.db.execute_query(query, (sale_id,))
+
+        if not result:
+            messagebox.showerror("Error", "Venta no encontrada")
+            return
+
+        if result[0]['status'] == 'cancelled':
+            messagebox.showwarning(
+                "Advertencia",
+                "Esta venta ya está anulada"
+            )
+            return
+
+        # Confirmar anulación
+        if not messagebox.askyesno(
+            "Confirmar Anulación",
+            f"¿Está seguro de anular la venta N° {sale_id}?\n\n" +
+            "Esta acción:\n" +
+            "• Reintegrará el stock de los productos\n" +
+            "• Marcará la venta como ANULADA\n" +
+            "• No se podrá revertir\n\n" +
+            "¿Continuar?"
+        ):
+            return
+
+        # Pedir motivo
+        from tkinter import simpledialog
+        reason = simpledialog.askstring(
+            "Motivo de Anulación",
+            "Ingrese el motivo de la anulación:",
+            parent=self.report_form
+        )
+
+        if not reason:
+            reason = "Sin especificar"
+
+        # Anular venta
+        if self.db.cancel_sale(sale_id, reason):
+            messagebox.showinfo(
+                "Éxito",
+                f"Venta N° {sale_id} anulada correctamente.\n" +
+                "El stock ha sido reintegrado."
+            )
+            # Refrescar reportes
+            self.refresh()
+            # Refrescar lista de productos para mostrar stock actualizado
+            if self.product_list:
+                self.product_list.refresh()
+        else:
+            messagebox.showerror(
+                "Error",
+                "No se pudo anular la venta.\n" +
+                "Verifique los logs para más detalles."
             )

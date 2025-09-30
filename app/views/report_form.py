@@ -198,11 +198,23 @@ class ReportForm(ttk.Frame):
                 if len(fecha_str) > 19:
                     fecha_str = fecha_str[:19]
 
+                # Determinar el tag según el estado
+                status = venta.get('status', 'active')
+                if status == 'cancelled':
+                    tag = 'cancelled'
+                    total_text = f"${venta['total']:.2f} [ANULADA]"
+                else:
+                    tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                    total_text = f"${venta['total']:.2f}"
+
                 self.tabla_ventas.insert(
                     "", END,
-                    values=(venta['id'], fecha_str, f"${venta['total']:.2f}"),
-                    tags=('evenrow' if i % 2 == 0 else 'oddrow',)
+                    values=(venta['id'], fecha_str, total_text),
+                    tags=(tag,)
                 )
+            
+            # Configurar estilo para ventas anuladas
+            self.tabla_ventas.tag_configure('cancelled', background='#ffcccc', foreground='#cc0000')
 
     def show_sale_detail(self, sale_id, sale_date, sale_total, details):
         """Muestra una ventana con el detalle de la venta"""
@@ -333,6 +345,15 @@ class ReportForm(ttk.Frame):
             command=lambda: self._on_export_ticket_pdf(
                 sale_id, sale_date, sale_total, details
             ),
+            width=20
+        ).pack(side=LEFT, padx=5)
+
+        # Botón: Anular Venta
+        ttk.Button(
+            buttons_frame,
+            text="❌ Anular Venta",
+            bootstyle="danger",
+            command=lambda: self._on_cancel_sale(sale_id, detail_window),
             width=20
         ).pack(side=LEFT, padx=5)
 
@@ -471,3 +492,10 @@ class ReportForm(ttk.Frame):
                 self.report_controller.export_sale_ticket_to_pdf(
                     sale_id, sale_date, sale_total, sale_paid, sale_change, details
                 )
+
+    def _on_cancel_sale(self, sale_id, detail_window):
+        """Maneja el clic en el botón de anular venta"""
+        if self.report_controller:
+            self.report_controller.cancel_sale(sale_id)
+            # Cerrar ventana de detalle si la anulación fue exitosa
+            detail_window.destroy()

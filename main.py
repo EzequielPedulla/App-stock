@@ -11,7 +11,8 @@ def main():
     product_controller = ProductController(
         window.product_form, window.product_list)
 
-    report_controller = ReportController(window.report_form)
+    report_controller = ReportController(
+        window.report_form, window.product_list)
 
     sale_controller = SaleController(
         window.sale_form,

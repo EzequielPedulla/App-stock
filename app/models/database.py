@@ -49,7 +49,10 @@ class Database:
                 date DATETIME NOT NULL,
                 total DECIMAL(10,2) NOT NULL,
                 paid DECIMAL(10,2) NOT NULL,
-                `change` DECIMAL(10,2) NOT NULL
+                `change` DECIMAL(10,2) NOT NULL,
+                status VARCHAR(20) DEFAULT 'active',
+                cancelled_at DATETIME NULL,
+                cancellation_reason TEXT NULL
             )
         ''')
 
@@ -142,6 +145,66 @@ class Database:
         except Exception as e:
             print(f"Error en consulta: {e}")
             return []
+
+    def cancel_sale(self, sale_id: int, reason: str = "Sin especificar") -> bool:
+        """
+        Anula una venta y reintegra el stock.
+
+        Args:
+            sale_id: ID de la venta a anular
+            reason: Motivo de la anulación
+
+        Returns:
+            bool: True si se anuló correctamente, False en caso contrario
+        """
+        try:
+            from datetime import datetime
+
+            # Verificar que la venta existe y está activa
+            query = "SELECT status FROM sales WHERE id = %s"
+            result = self.execute_query(query, (sale_id,))
+
+            if not result:
+                print(f"Venta {sale_id} no encontrada")
+                return False
+
+            if result[0]['status'] == 'cancelled':
+                print(f"Venta {sale_id} ya está anulada")
+                return False
+
+            # Obtener detalles de la venta para reintegrar stock
+            query = """
+                SELECT product_id, quantity 
+                FROM sale_details 
+                WHERE sale_id = %s
+            """
+            details = self.execute_query(query, (sale_id,))
+
+            # Reintegrar stock de cada producto (excepto VARIOS)
+            for detail in details:
+                product = self.get_product_by_id(detail['product_id'])
+                if product and not product.barcode.startswith('VAR'):
+                    product.stock += detail['quantity']
+                    self.update_product(product)
+
+            # Marcar venta como anulada
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            update_query = """
+                UPDATE sales 
+                SET status = 'cancelled',
+                    cancelled_at = %s,
+                    cancellation_reason = %s
+                WHERE id = %s
+            """
+            self.cursor.execute(update_query, (now, reason, sale_id))
+            self.connection.commit()
+
+            return True
+
+        except Exception as e:
+            print(f"Error al anular venta: {e}")
+            self.connection.rollback()
+            return False
 
     def __del__(self):
         # No cerrar la conexión en el destructor ya que es compartida

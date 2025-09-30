@@ -60,7 +60,7 @@ class ExportService:
         ws_ventas.title = "Historial de Ventas"
 
         # Encabezado
-        headers = ["ID", "Fecha", "Total", "Pagado", "Cambio"]
+        headers = ["ID", "Fecha", "Total", "Pagado", "Cambio", "Estado"]
         ws_ventas.append(headers)
 
         # Estilo del encabezado
@@ -80,20 +80,38 @@ class ExportService:
             if len(fecha_str) > 19:
                 fecha_str = fecha_str[:19]
 
+            # Determinar el estado de la venta
+            estado = venta.get('status', 'active')
+            estado_texto = "ACTIVA" if estado == 'active' else "ANULADA"
+
             ws_ventas.append([
                 venta['id'],
                 fecha_str,
                 float(venta['total']),
                 float(venta['paid']),
-                float(venta['change'])
+                float(venta['change']),
+                estado_texto
             ])
 
-        # Formatear montos
+        # Formatear montos y estado
         for row in range(2, len(ventas) + 2):
+            # Formatear montos
             for col in [3, 4, 5]:  # Total, Pagado, Cambio
                 cell = ws_ventas.cell(row=row, column=col)
                 cell.number_format = '$#,##0.00'
                 cell.alignment = Alignment(horizontal="right")
+
+            # Formatear estado
+            estado_cell = ws_ventas.cell(
+                row=row, column=6)  # Columna F (Estado)
+            estado_cell.alignment = Alignment(horizontal="center")
+
+            # Si la venta está anulada, aplicar formato rojo
+            if estado_cell.value == "ANULADA":
+                estado_cell.fill = PatternFill(
+                    start_color="FFCCCC", end_color="FFCCCC", fill_type="solid"
+                )
+                estado_cell.font = Font(bold=True, color="CC0000")
 
         # Ajustar anchos de columna
         ws_ventas.column_dimensions['A'].width = 10
@@ -101,6 +119,7 @@ class ExportService:
         ws_ventas.column_dimensions['C'].width = 15
         ws_ventas.column_dimensions['D'].width = 15
         ws_ventas.column_dimensions['E'].width = 15
+        ws_ventas.column_dimensions['F'].width = 12
 
         # Hoja 2: Productos Más Vendidos
         ws_productos = wb.create_sheet("Productos Vendidos")
