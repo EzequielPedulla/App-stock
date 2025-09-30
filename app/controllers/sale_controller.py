@@ -1,15 +1,37 @@
-from ..models.database import Database
-from ..models.product import Product
+"""Controlador para el módulo de ventas."""
+
+from typing import Any
 from tkinter import messagebox
 import datetime
+import os
+
+from ..models.database import Database
+from ..models.product import Product
+from ..services.export_service import ExportService
 
 
 class SaleController:
-    def __init__(self, sale_form, product_list=None, report_controller=None):
+    """Controlador para gestionar ventas."""
+
+    def __init__(
+        self,
+        sale_form: Any,
+        product_list: Any = None,
+        report_controller: Any = None
+    ) -> None:
+        """
+        Inicializa el controlador de ventas.
+
+        Args:
+            sale_form: Formulario de ventas (vista)
+            product_list: Lista de productos (vista)
+            report_controller: Controlador de reportes
+        """
         self.sale_form = sale_form
         self.product_list = product_list
         self.report_controller = report_controller
         self.db = Database()
+        self.export_service = ExportService()
         self.items = []
         self.temp_stock = {}
         self._connect_events()
@@ -410,8 +432,96 @@ class SaleController:
             if self.report_controller:
                 self.report_controller.refresh()
 
+            # Preguntar si desea generar el ticket
+            if messagebox.askyesno(
+                "Ticket de Venta",
+                "¿Desea generar el ticket de venta en PDF?"
+            ):
+                self._generate_sale_ticket(sale_id, date, total, paid, change)
+
             return True
         except Exception as e:
             messagebox.showerror(
                 "Error", f"Error al confirmar la venta: {str(e)}")
             return False
+
+    def _generate_sale_ticket(
+        self,
+        sale_id: int,
+        sale_date: str,
+        sale_total: float,
+        sale_paid: float,
+        sale_change: float
+    ) -> None:
+        """
+        Genera el ticket de venta en PDF.
+
+        Args:
+            sale_id: ID de la venta
+            sale_date: Fecha de la venta
+            sale_total: Total de la venta
+            sale_paid: Monto pagado
+            sale_change: Cambio entregado
+        """
+        try:
+            # Obtener los detalles de la venta desde la base de datos
+            query = """
+                SELECT p.name as producto, sd.quantity as cantidad,
+                       sd.unit_price as precio, 
+                       (sd.quantity * sd.unit_price) as subtotal
+                FROM sale_details sd
+                JOIN products p ON sd.product_id = p.id
+                WHERE sd.sale_id = %s
+                ORDER BY sd.id
+            """
+            details = self.db.execute_query(query, (sale_id,))
+
+            if not details:
+                messagebox.showwarning(
+                    "Advertencia",
+                    "No se encontraron detalles de la venta."
+                )
+                return
+
+            # Generar el ticket
+            filename = self.export_service.export_sale_ticket_to_pdf(
+                sale_id=sale_id,
+                sale_date=sale_date,
+                sale_total=sale_total,
+                sale_paid=sale_paid,
+                sale_change=sale_change,
+                details=details
+            )
+
+            # Preguntar qué hacer con el ticket (3 opciones)
+            from tkinter import messagebox as mb
+            result = mb.askyesnocancel(
+                "Ticket Generado",
+                f"Ticket guardado en:\n{filename}\n\n" +
+                "¿Qué desea hacer?\n\n" +
+                "• SÍ = Imprimir ticket\n" +
+                "• NO = Abrir PDF\n" +
+                "• Cancelar = Nada"
+            )
+
+            if result is True:  # Sí = Imprimir
+                if self.export_service.print_pdf(filename):
+                    messagebox.showinfo(
+                        "Imprimiendo",
+                        "✓ Ticket enviado a la impresora predeterminada.\n\n" +
+                        "Se abrirá el diálogo de impresión."
+                    )
+                else:
+                    messagebox.showerror(
+                        "Error de Impresión",
+                        "No se pudo enviar el ticket a imprimir.\n" +
+                        "Verifique que tenga una impresora configurada."
+                    )
+            elif result is False:  # No = Abrir
+                os.startfile(filename)
+
+        except Exception as e:
+            messagebox.showerror(
+                "Error al generar ticket",
+                f"No se pudo generar el ticket:\n{str(e)}"
+            )

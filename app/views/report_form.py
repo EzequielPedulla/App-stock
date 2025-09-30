@@ -11,15 +11,50 @@ class ReportForm(ttk.Frame):
         super().__init__(parent, **kwargs)
         self.pack(fill=BOTH, expand=True)
         self.canvas_widget = None  # Para almacenar el canvas del gráfico
+        self.report_controller = None  # Se establecerá desde el controlador
         self._create_widgets()
 
     def _create_widgets(self):
-        # Título
+        # Título y botones de exportación
+        header_frame = ttk.Frame(self)
+        header_frame.pack(fill=X, pady=(0, 20))
+
         ttk.Label(
-            self,
+            header_frame,
             text="Reportes",
             font=("Segoe UI", 24, "bold")
-        ).pack(anchor=W, pady=(0, 20))
+        ).pack(side=LEFT, anchor=W)
+
+        # Frame para botones de exportación
+        export_buttons_frame = ttk.Frame(header_frame)
+        export_buttons_frame.pack(side=RIGHT)
+
+        # Botón: Exportar Reporte PDF
+        ttk.Button(
+            export_buttons_frame,
+            text="📊 Reporte PDF",
+            bootstyle="info",
+            command=self._on_export_pdf_report,
+            width=18
+        ).pack(side=LEFT, padx=5)
+
+        # Botón: Exportar Ventas Excel
+        ttk.Button(
+            export_buttons_frame,
+            text="📈 Ventas Excel",
+            bootstyle="success",
+            command=self._on_export_sales_excel,
+            width=18
+        ).pack(side=LEFT, padx=5)
+
+        # Botón: Exportar Inventario Excel
+        ttk.Button(
+            export_buttons_frame,
+            text="📦 Inventario Excel",
+            bootstyle="success",
+            command=self._on_export_inventory_excel,
+            width=18
+        ).pack(side=LEFT, padx=5)
 
         # Container para las cards superiores
         top_cards = ttk.Frame(self)
@@ -286,14 +321,29 @@ class ReportForm(ttk.Frame):
             bootstyle="success"
         ).pack(side=RIGHT, padx=(20, 0))
 
+        # Frame para botones
+        buttons_frame = ttk.Frame(main_frame)
+        buttons_frame.pack(pady=(15, 0))
+
+        # Botón: Exportar Ticket
+        ttk.Button(
+            buttons_frame,
+            text="🎫 Exportar Ticket PDF",
+            bootstyle="info",
+            command=lambda: self._on_export_ticket_pdf(
+                sale_id, sale_date, sale_total, details
+            ),
+            width=20
+        ).pack(side=LEFT, padx=5)
+
         # Botón cerrar
         ttk.Button(
-            main_frame,
+            buttons_frame,
             text="Cerrar",
             bootstyle="secondary",
             command=detail_window.destroy,
             width=20
-        ).pack(pady=(15, 0))
+        ).pack(side=LEFT, padx=5)
 
     def _update_grafico(self, productos_vendidos):
         """Actualiza el gráfico de productos más vendidos"""
@@ -390,3 +440,34 @@ class ReportForm(ttk.Frame):
                 font=("Segoe UI", 10),
                 foreground="red"
             ).place(relx=0.5, rely=0.5, anchor=CENTER)
+
+    def _on_export_pdf_report(self):
+        """Maneja el clic en el botón de exportar reporte PDF"""
+        if self.report_controller:
+            self.report_controller.export_sales_report_to_pdf()
+
+    def _on_export_sales_excel(self):
+        """Maneja el clic en el botón de exportar ventas a Excel"""
+        if self.report_controller:
+            self.report_controller.export_sales_to_excel()
+
+    def _on_export_inventory_excel(self):
+        """Maneja el clic en el botón de exportar inventario a Excel"""
+        if self.report_controller:
+            self.report_controller.export_inventory_to_excel()
+
+    def _on_export_ticket_pdf(self, sale_id, sale_date, sale_total, details):
+        """Maneja el clic en el botón de exportar ticket de venta"""
+        if self.report_controller:
+            # Obtener datos completos de la venta
+            query = f"SELECT paid, `change` FROM sales WHERE id = {sale_id}"
+            from ..models.database import Database
+            db = Database()
+            result = db.execute_query(query)
+
+            if result:
+                sale_paid = float(result[0]['paid'])
+                sale_change = float(result[0]['change'])
+                self.report_controller.export_sale_ticket_to_pdf(
+                    sale_id, sale_date, sale_total, sale_paid, sale_change, details
+                )

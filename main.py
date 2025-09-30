@@ -13,7 +13,6 @@ def main():
 
     report_controller = ReportController(window.report_form)
 
-    # Pasar la INSTANCIA, no la clase
     sale_controller = SaleController(
         window.sale_form,
         window.product_list,
