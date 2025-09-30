@@ -1,4 +1,4 @@
-# 🏪 App Stock - Sistema de Gestión de Inventario y Ventas
+# 🏪 App-Stock - Sistema de Gestión de Inventario y Ventas
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![Tests](https://img.shields.io/badge/tests-20%20passed-brightgreen.svg)
@@ -12,9 +12,21 @@ Sistema completo de gestión de inventario, ventas y reportes con exportación a
 - 💰 **Sistema de Ventas** - Carrito intuitivo con cálculo automático de totales
 - 📊 **Reportes Profesionales** - Exportación a PDF y Excel con gráficos
 - 🎫 **Tickets de Venta** - Generación e impresión automática
+- ❌ **Anulación de Ventas** - Cancelación con reintegro de stock
+- ➕ **Artículos Varios** - Venta de productos no registrados
 - 🎨 **Interfaz Moderna** - Diseño profesional con ttkbootstrap
 
 ## 🚀 Instalación Rápida
+
+### Opción 1: Instalador Automático (Recomendado)
+
+```bash
+# Descargar el instalador desde releases
+# Ejecutar App-Stock-Installer-v1.0.exe como administrador
+# ¡Listo! Todo se configura automáticamente
+```
+
+### Opción 2: Instalación Manual
 
 ```bash
 # Clonar repositorio
@@ -42,21 +54,32 @@ python main.py
 **Backend:** Python 3.11+ • PyMySQL • python-dotenv  
 **Frontend:** tkinter • ttkbootstrap  
 **Reportes:** ReportLab • OpenPyXL • Matplotlib  
-**Testing:** pytest • pytest-cov • pytest-mock
+**Testing:** pytest • pytest-cov • pytest-mock  
+**Distribución:** PyInstaller • Inno Setup
 
-## 📊 Exportación de Reportes
+## 📊 Funcionalidades Detalladas
 
-### PDF
+### Gestión de Productos
 
-- Reportes completos con gráficos de productos más vendidos
-- Tickets individuales de venta
-- Impresión directa a impresora predeterminada
+- ✅ Agregar, editar, eliminar productos
+- ✅ Control de stock automático
+- ✅ Búsqueda por código de barras
+- ✅ Alertas de stock bajo
 
-### Excel
+### Sistema de Ventas
 
-- Historial de ventas completo
-- Inventario con resaltado de stock bajo
-- Formato profesional con colores y bordes
+- ✅ Carrito de compras intuitivo
+- ✅ Cálculo automático de totales
+- ✅ Tickets de venta en PDF
+- ✅ Impresión directa
+- ✅ Artículos "Varios" para productos no registrados
+
+### Reportes y Exportación
+
+- ✅ Reportes completos con gráficos
+- ✅ Exportación a PDF y Excel
+- ✅ Historial de ventas
+- ✅ Anulación de ventas con reintegro de stock
 
 ## 🧪 Tests
 
@@ -67,9 +90,12 @@ pytest
 # Con cobertura
 pytest --cov=app
 
+# Tests específicos
+pytest tests/test_export_service.py -v
+pytest tests/test_cancel_sale.py -v
 ```
 
-## 📁 Estructura
+## 📁 Estructura del Proyecto
 
 ```
 App-Stock/
@@ -79,6 +105,70 @@ App-Stock/
 │   ├── services/       # Exportación PDF/Excel
 │   └── views/          # Interfaz gráfica
 ├── tests/              # Suite de tests
-├── reportes/           # PDFs y Excel generados
+├── docs/               # Documentación
+├── installers/         # Scripts de instalación
+├── imagenes/           # Recursos gráficos
 └── main.py             # Punto de entrada
 ```
+
+## 📋 Requisitos del Sistema
+
+- **Windows 10/11** (para el instalador)
+- **Python 3.11+** (para desarrollo)
+- **MySQL 8.0+** (incluido en el instalador)
+- **4 GB RAM** mínimo
+- **500 MB** espacio en disco
+
+## 🎯 Distribución
+
+### Para Desarrolladores
+
+- Clona el repositorio
+- Instala dependencias
+- Configura base de datos
+- Ejecuta `python main.py`
+
+### Para Usuarios Finales
+
+- Descarga `App-Stock-Installer-v1.0.exe`
+- Ejecuta como administrador
+- ¡Listo para usar!
+
+## 📖 Documentación
+
+- [Instrucciones de Instalación](docs/INSTRUCCIONES.txt)
+- [Guía de Creación de Instalador](docs/COMO_CREAR_INSTALADOR.txt)
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+
+## 👨‍💻 Autor
+
+**Ezequiel Pedulla**
+
+- GitHub: [@EzequielPedulla](https://github.com/EzequielPedulla)
+- Proyecto: [App-Stock](https://github.com/EzequielPedulla/App-stock)
+
+## 🆕 Changelog
+
+### v1.0.0 (Septiembre 2024)
+
+- ✅ Sistema completo de inventario y ventas
+- ✅ Exportación a PDF y Excel
+- ✅ Anulación de ventas
+- ✅ Artículos varios
+- ✅ Instalador automático
+- ✅ Tests completos
+
+---
+
+⭐ **¡Si te gusta este proyecto, dale una estrella!** ⭐

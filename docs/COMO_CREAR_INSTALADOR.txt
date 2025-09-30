@@ -1,0 +1,77 @@
+========================================
+    COMO CREAR EL INSTALADOR APP-STOCK
+========================================
+
+PASO 1: INSTALAR INNO SETUP
+----------------------------
+1. Descargue Inno Setup desde: https://jrsoftware.org/isinfo.php
+2. Instale Inno Setup (es gratuito)
+3. Reinicie la computadora si es necesario
+
+PASO 2: PREPARAR ARCHIVOS
+-------------------------
+Asegurese de que en la carpeta distribucion/ esten:
+- App-Stock.exe (el ejecutable principal)
+- App-Stock-Installer.iss (script de Inno Setup)
+- instalar_todo.bat (configuracion automatica)
+- iniciar_app.bat (inicio facil)
+- INSTRUCCIONES.txt (manual del usuario)
+- LICENSE.txt (licencia)
+- config.py (configuracion)
+- README.md (documentacion)
+
+PASO 3: CREAR INSTALADOR
+------------------------
+1. Ejecute crear_instalador.bat
+2. Espere a que se compile (2-5 minutos)
+3. El instalador estara en: App-Stock-Installer-v1.0.exe
+
+PASO 4: PROBAR INSTALADOR
+-------------------------
+1. Copie el instalador a otra PC
+2. Ejecute como administrador
+3. Verifique que todo funcione correctamente
+
+========================================
+    ESTRUCTURA DEL INSTALADOR
+========================================
+
+El instalador incluye:
+- App-Stock.exe (aplicacion principal)
+- Scripts de configuracion automatica
+- Descarga e instalacion de XAMPP
+- Configuracion de MySQL
+- Creacion de base de datos
+- Accesos directos en escritorio
+- Configuracion de permisos
+
+========================================
+    DISTRIBUCION AL CLIENTE
+========================================
+
+Para el cliente:
+1. Descargar App-Stock-Installer-v1.0.exe
+2. Ejecutar como administrador
+3. Seguir las instrucciones en pantalla
+4. ¡Listo! La aplicacion funciona
+
+========================================
+    SOLUCION DE PROBLEMAS
+========================================
+
+Si el instalador falla:
+1. Verifique que Inno Setup este instalado
+2. Ejecute crear_instalador.bat como administrador
+3. Verifique que todos los archivos esten presentes
+4. Revise los logs de Inno Setup
+
+Si la instalacion en el cliente falla:
+1. Verifique que tenga permisos de administrador
+2. Desactive temporalmente el antivirus
+3. Verifique la conexion a internet (para descargar XAMPP)
+4. Ejecute instalar_todo.bat manualmente
+
+========================================
+    VERSION: 1.0
+    FECHA: Septiembre 2024
+========================================
