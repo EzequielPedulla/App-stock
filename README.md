@@ -1,107 +1,84 @@
-# 🏪 Sistema de Gestión de Inventario y Ventas
+# 🏪 App Stock - Sistema de Gestión de Inventario y Ventas
 
-## ✨ Características
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![Tests](https://img.shields.io/badge/tests-20%20passed-brightgreen.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-### 🛍️ **Gestión de Productos**
+Sistema completo de gestión de inventario, ventas y reportes con exportación a PDF/Excel e impresión de tickets.
 
-- ➕ **Agregar productos** con código de barras, nombre, precio y stock
-- ✏️ **Editar productos** existentes
-- 🗑️ **Eliminar productos** del inventario
-- 📋 **Lista completa** con búsqueda y filtros
-- 🔍 **Búsqueda por código de barras** o nombre
+## ✨ Características Principales
 
-### 💰 **Sistema de Ventas**
+- 🛍️ **Gestión de Productos** - CRUD completo con búsqueda y control de stock
+- 💰 **Sistema de Ventas** - Carrito intuitivo con cálculo automático de totales
+- 📊 **Reportes Profesionales** - Exportación a PDF y Excel con gráficos
+- 🎫 **Tickets de Venta** - Generación e impresión automática
+- 🎨 **Interfaz Moderna** - Diseño profesional con ttkbootstrap
 
-- 🛒 **Carrito de compras** intuitivo
-- 📊 **Cálculo automático** de totales y subtotales
-- 💳 **Múltiples métodos de pago** (efectivo)
-- 🧾 **Cálculo de vuelto** automático
-- ✏️ **Editar cantidades** en tiempo real
-- 🗑️ **Eliminar productos** del carrito
-- 📈 **Control de stock** en tiempo real
-
-### 🎨 **Interfaz de Usuario**
-
-- 🖥️ **Diseño moderno** con ttkbootstrap
-- 🌙 **Tema profesional** (Flatly)
-- 📱 **Interfaz intuitiva** y fácil de usar
-- 🎯 **Navegación por pestañas** (Productos/Ventas)
-- ⚡ **Responsive** y optimizada
-
-### 🗄️ **Base de Datos**
-
-- 🐬 **MySQL** para almacenamiento robusto
-- 🔗 **Relaciones bien estructuradas** (Productos, Ventas, Detalles)
-- 📊 **Integridad referencial** garantizada
-- 🔄 **Transacciones** seguras
-
----
-
-## 🛠️ Tecnologías
-
-### Backend
-
-- **Python 3.8+** - Lenguaje principal
-- **PyMySQL** - Conector MySQL
-- **tkinter** - Framework GUI base
-
-### Frontend
-
-- **ttkbootstrap** - Componentes modernos
-- **Custom CSS** - Estilos personalizados
-
-### Base de Datos
-
-- **MySQL 5.7+** - Sistema de gestión de base de datos
-
----
-
-## 🚀 Instalación y Configuración
-
-### 1. Clonar el repositorio
+## 🚀 Instalación Rápida
 
 ```bash
-git clone <repository-url>
-cd App-Stock
-```
+# Clonar repositorio
+git clone https://github.com/EzequielPedulla/App-stock.git
+cd App-stock
 
-### 2. Crear entorno virtual
-
-```bash
+# Crear entorno virtual e instalar dependencias
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-```
-
-### 3. Instalar dependencias
-
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+
+# Configurar base de datos
+cp .env.example .env
+# Editar .env con tus credenciales MySQL
+
+# Crear base de datos
+mysql -u root -p -e "CREATE DATABASE app_stock;"
+
+# Ejecutar
+python main.py
 ```
 
-### 4. Configurar variables de entorno
+## 🛠️ Stack Tecnológico
 
-Crea un archivo `.env` en la raíz del proyecto con:
+**Backend:** Python 3.11+ • PyMySQL • python-dotenv  
+**Frontend:** tkinter • ttkbootstrap  
+**Reportes:** ReportLab • OpenPyXL • Matplotlib  
+**Testing:** pytest • pytest-cov • pytest-mock
 
-```env
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=tu_contraseña_aquí
-MYSQL_DATABASE=app_stock
-```
+## 📊 Exportación de Reportes
 
-> ⚠️ **IMPORTANTE**: Nunca subas el archivo `.env` al repositorio. Ya está incluido en `.gitignore`.
+### PDF
 
-### 5. Crear la base de datos
+- Reportes completos con gráficos de productos más vendidos
+- Tickets individuales de venta
+- Impresión directa a impresora predeterminada
 
-```sql
-CREATE DATABASE app_stock;
-```
+### Excel
 
-Las tablas se crearán automáticamente al iniciar la aplicación.
+- Historial de ventas completo
+- Inventario con resaltado de stock bajo
+- Formato profesional con colores y bordes
 
-### 6. Ejecutar la aplicación
+## 🧪 Tests
 
 ```bash
-python main.py
+# Ejecutar tests
+pytest
+
+# Con cobertura
+pytest --cov=app
+
+```
+
+## 📁 Estructura
+
+```
+App-Stock/
+├── app/
+│   ├── controllers/    # Lógica de negocio
+│   ├── models/         # Modelos y base de datos
+│   ├── services/       # Exportación PDF/Excel
+│   └── views/          # Interfaz gráfica
+├── tests/              # Suite de tests
+├── reportes/           # PDFs y Excel generados
+└── main.py             # Punto de entrada
 ```

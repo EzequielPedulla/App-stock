@@ -55,6 +55,13 @@ class SaleForm(ttk.Frame):
         self.add_button.grid(row=2, column=2, sticky=tk.E,
                              padx=(10, 0), pady=5)
 
+        # Botón VARIOS
+        self.varios_button = ttk.Button(
+            card, text="➕ Varios", bootstyle="info", width=15,
+            command=self._show_varios_dialog)
+        self.varios_button.grid(row=3, column=2, sticky=tk.E,
+                                padx=(10, 0), pady=5)
+
         self.edit_button = ttk.Button(
             card, text="Editar", bootstyle="warning", width=15)
         self.edit_button.grid(row=2, column=3, sticky=tk.E,
@@ -425,3 +432,140 @@ class SaleForm(ttk.Frame):
         """Configura el estado de los botones de acción."""
         self.edit_button.configure(state=state)
         self.delete_button.configure(state=state)
+
+    def _show_varios_dialog(self) -> None:
+        """Muestra un diálogo para agregar un artículo 'varios' sin registro."""
+        # Crear ventana modal
+        dialog = ttk.Toplevel(self)
+        dialog.title("Artículo Varios")
+        dialog.geometry("450x300")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Centrar la ventana
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+
+        # Frame principal
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=BOTH, expand=True)
+
+        # Título
+        ttk.Label(
+            main_frame,
+            text="➕ Agregar Artículo Varios",
+            font=("Segoe UI", 16, "bold")
+        ).pack(pady=(0, 20))
+
+        # Descripción
+        ttk.Label(
+            main_frame,
+            text="Para productos que no están en el inventario",
+            font=("Segoe UI", 10),
+            foreground="gray"
+        ).pack(pady=(0, 15))
+
+        # Campo: Nombre
+        ttk.Label(
+            main_frame,
+            text="Nombre del artículo:",
+            font=("Segoe UI", 11)
+        ).pack(anchor=W, pady=(0, 5))
+
+        name_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        name_entry.pack(fill=X, pady=(0, 15))
+        name_entry.focus()
+
+        # Frame para precio y cantidad
+        grid_frame = ttk.Frame(main_frame)
+        grid_frame.pack(fill=X, pady=(0, 15))
+
+        # Campo: Precio
+        ttk.Label(
+            grid_frame,
+            text="Precio unitario:",
+            font=("Segoe UI", 11)
+        ).grid(row=0, column=0, sticky=W, pady=(0, 5))
+
+        price_entry = ttk.Entry(grid_frame, font=("Segoe UI", 12))
+        price_entry.grid(row=1, column=0, sticky=EW, padx=(0, 10))
+        grid_frame.columnconfigure(0, weight=1)
+
+        # Campo: Cantidad
+        ttk.Label(
+            grid_frame,
+            text="Cantidad:",
+            font=("Segoe UI", 11)
+        ).grid(row=0, column=1, sticky=W, pady=(0, 5))
+
+        qty_entry = ttk.Entry(grid_frame, font=("Segoe UI", 12))
+        qty_entry.insert(0, "1")  # Default: 1
+        qty_entry.grid(row=1, column=1, sticky=EW)
+        grid_frame.columnconfigure(1, weight=1)
+
+        # Botones
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=X, pady=(20, 0))
+
+        def confirm_varios():
+            """Confirma y agrega el artículo varios."""
+            name = name_entry.get().strip()
+            price_str = price_entry.get().strip()
+            qty_str = qty_entry.get().strip()
+
+            # Validaciones
+            if not name:
+                messagebox.showerror("Error", "Ingrese el nombre del artículo")
+                name_entry.focus()
+                return
+
+            try:
+                price = float(price_str)
+                if price <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messagebox.showerror("Error", "Ingrese un precio válido")
+                price_entry.focus()
+                return
+
+            try:
+                qty = int(qty_str)
+                if qty <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messagebox.showerror("Error", "Ingrese una cantidad válida")
+                qty_entry.focus()
+                return
+
+            # Generar evento con los datos
+            self.varios_data = {
+                'name': name,
+                'price': price,
+                'qty': qty
+            }
+            dialog.destroy()
+            self.event_generate("<<AddVarios>>")
+
+        ttk.Button(
+            button_frame,
+            text="Agregar",
+            bootstyle="success",
+            command=confirm_varios,
+            width=15
+        ).pack(side=RIGHT, padx=(5, 0))
+
+        ttk.Button(
+            button_frame,
+            text="Cancelar",
+            bootstyle="secondary",
+            command=dialog.destroy,
+            width=15
+        ).pack(side=RIGHT)
+
+        # Enter para confirmar
+        dialog.bind('<Return>', lambda e: confirm_varios())

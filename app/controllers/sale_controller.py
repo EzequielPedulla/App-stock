@@ -48,6 +48,8 @@ class SaleController:
         self.sale_form.tree.bind('<Double-1>', self._on_double_click)
         # Conectar evento de confirmación de venta
         self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
+        # Conectar evento de artículo varios
+        self.sale_form.bind("<<AddVarios>>", lambda e: self.add_varios())
 
     def _on_select_item(self, event) -> None:
         """Maneja el evento cuando se selecciona un item en la tabla.
@@ -255,6 +257,35 @@ class SaleController:
 
             messagebox.showinfo("Éxito", "Producto eliminado de la venta.")
 
+    def add_varios(self) -> None:
+        """Agrega un artículo 'varios' sin registro en inventario."""
+        if not hasattr(self.sale_form, 'varios_data'):
+            return
+
+        data = self.sale_form.varios_data
+
+        # Agregar a la lista de items
+        new_item = {
+            'barcode': 'VARIOS',  # Mostrar "VARIOS" en vez del código generado
+            'name': data['name'],  # Nombre real que puso el usuario
+            'qty': data['qty'],
+            'price': float(data['price']),
+            'subtotal': data['qty'] * float(data['price']),
+            'is_varios': True,  # Flag para identificarlo
+            'varios_name': data['name']  # Guardar el nombre original
+        }
+
+        self.items.append(new_item)
+        self._update_table()
+
+        # Limpiar datos temporales
+        delattr(self.sale_form, 'varios_data')
+
+        messagebox.showinfo(
+            "Éxito",
+            f"Artículo '{data['name']}' agregado al carrito"
+        )
+
     def add_item(self):
         # Obtener y limpiar los valores
         barcode = self.sale_form.barcode_entry.get().strip()
@@ -400,16 +431,53 @@ class SaleController:
 
             # Registrar los detalles de la venta
             for item in self.items:
-                product = self.db.get_product_by_barcode(item['barcode'])
-                if product:
+                # Si es un artículo "varios", crear producto temporal único
+                if item.get('is_varios', False):
+                    # Crear producto con el nombre real del artículo varios
+                    from ..models.product import Product
+                    import random
+
+                    # Generar código corto único (máximo 13 caracteres)
+                    # Formato: VAR-XXXXXX (10 caracteres total)
+                    varios_barcode = f"VAR-{random.randint(100000, 999999)}"
+
+                    # Asegurar que sea único
+                    while self.db.get_product_by_barcode(varios_barcode):
+                        varios_barcode = f"VAR-{random.randint(100000, 999999)}"
+
+                    # Crear el producto temporal con el nombre real
+                    varios_product = Product(
+                        barcode=varios_barcode,
+                        # Nombre real
+                        name=item.get('varios_name', item['name']),
+                        price=float(item['price']),
+                        stock=0  # Sin stock porque no se controla
+                    )
+                    self.db.add_product(varios_product)
+
+                    # Obtener el producto recién creado
+                    varios_product = self.db.get_product_by_barcode(
+                        varios_barcode)
+
+                    # Agregar detalle de venta
                     self.db.add_sale_detail(
                         sale_id=sale_id,
-                        product_id=product.id,
+                        product_id=varios_product.id,
                         quantity=int(item['qty']),
                         unit_price=float(item['price'])
                     )
+                else:
+                    # Producto normal
+                    product = self.db.get_product_by_barcode(item['barcode'])
+                    if product:
+                        self.db.add_sale_detail(
+                            sale_id=sale_id,
+                            product_id=product.id,
+                            quantity=int(item['qty']),
+                            unit_price=float(item['price'])
+                        )
 
-            # Actualizar el stock en la base de datos
+            # Actualizar el stock en la base de datos (solo productos normales)
             for barcode, qty in self.temp_stock.items():
                 product = self.db.get_product_by_barcode(barcode)
                 if product:
