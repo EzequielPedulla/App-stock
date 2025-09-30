@@ -1,12 +1,16 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import tkinter as tk
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 
 class ReportForm(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
         self.pack(fill=BOTH, expand=True)
+        self.canvas_widget = None  # Para almacenar el canvas del gráfico
         self._create_widgets()
 
     def _create_widgets(self):
@@ -72,16 +76,9 @@ class ReportForm(ttk.Frame):
             font=("Segoe UI", 14, "bold")
         ).pack(anchor=W, pady=(0, 15))
 
-        # Placeholder para el gráfico
+        # Frame para el gráfico
         self.grafico_frame = ttk.Frame(card_grafico, height=300)
         self.grafico_frame.pack(fill=BOTH, expand=True)
-
-        ttk.Label(
-            self.grafico_frame,
-            text="📊 Gráfico próximamente",
-            font=("Segoe UI", 11),
-            foreground="gray"
-        ).place(relx=0.5, rely=0.5, anchor=CENTER)
 
         # Card: Historial de ventas (tabla)
         card_tabla = ttk.Frame(bottom_container, bootstyle="light", padding=20)
@@ -146,6 +143,12 @@ class ReportForm(ttk.Frame):
         # Actualizar cards
         self.label_total_ventas.configure(text=f"${total_ventas:,.2f}")
         self.label_ultima_venta.configure(text=f"${ultima_venta:,.2f}")
+
+        # Actualizar gráfico de productos más vendidos
+        if productos_vendidos:
+            self._update_grafico(productos_vendidos)
+        else:
+            self._update_grafico([])
 
         # Actualizar tabla de últimas ventas
         if ultimas_ventas:
@@ -291,3 +294,99 @@ class ReportForm(ttk.Frame):
             command=detail_window.destroy,
             width=20
         ).pack(pady=(15, 0))
+
+    def _update_grafico(self, productos_vendidos):
+        """Actualiza el gráfico de productos más vendidos"""
+        try:
+            # Limpiar el canvas anterior si existe
+            if self.canvas_widget:
+                self.canvas_widget.get_tk_widget().destroy()
+
+            # Limpiar el frame
+            for widget in self.grafico_frame.winfo_children():
+                widget.destroy()
+
+            if not productos_vendidos:
+                # Si no hay datos, mostrar mensaje
+                ttk.Label(
+                    self.grafico_frame,
+                    text="📊 No hay datos de ventas aún",
+                    font=("Segoe UI", 11),
+                    foreground="gray"
+                ).place(relx=0.5, rely=0.5, anchor=CENTER)
+                return
+
+            # Preparar datos (tomar solo los top 5 para que se vea bien)
+            top_productos = productos_vendidos[:5]
+            nombres = [p['producto'][:18]
+                       for p in top_productos]  # Limitar nombre a 18 caracteres
+            cantidades = [int(p['cantidad_vendida']) for p in top_productos]
+
+            # Crear figura de matplotlib con mejor tamaño
+            fig = Figure(figsize=(6.5, 4.2), dpi=100, facecolor='white')
+            ax = fig.add_subplot(111)
+
+            # Colores profesionales (gradiente de azul a verde)
+            colores = ['#1e88e5', '#26a69a', '#66bb6a', '#ffa726', '#ef5350']
+
+            # Crear gráfico de barras verticales con efecto de gradiente
+            bars = ax.bar(nombres, cantidades, color=colores[:len(nombres)],
+                          width=0.65, edgecolor='white', linewidth=1.5, alpha=0.9)
+
+            # Agregar grid sutil para mejor lectura
+            ax.yaxis.grid(True, linestyle='--', alpha=0.3, color='gray')
+            ax.set_axisbelow(True)
+
+            # Personalizar el gráfico
+            ax.set_ylabel('Unidades Vendidas', fontsize=11,
+                          weight='bold', color='#2c3e50')
+            ax.set_xlabel('Productos', fontsize=11,
+                          weight='bold', color='#2c3e50')
+            ax.set_title('Productos Más Vendidos',
+                         fontsize=14, weight='bold', pad=15, color='#2c3e50')
+            ax.set_facecolor('#fafafa')
+
+            # Rotar las etiquetas del eje X
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=35, ha='right',
+                     fontsize=10, color='#34495e')
+            plt.setp(ax.yaxis.get_majorticklabels(),
+                     fontsize=10, color='#34495e')
+
+            # Añadir valores encima de las barras con mejor formato
+            for i, (bar, cantidad) in enumerate(zip(bars, cantidades)):
+                height = bar.get_height()
+                # Añadir un pequeño recuadro detrás del número
+                ax.text(bar.get_x() + bar.get_width()/2, height + max(cantidades)*0.02,
+                        f'{cantidad}',
+                        ha='center', va='bottom', fontsize=11, weight='bold',
+                        color='#2c3e50',
+                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                                  edgecolor=colores[i], alpha=0.8, linewidth=1.5))
+
+            # Ajustar los límites del eje Y para dar espacio a las etiquetas
+            ax.set_ylim(0, max(cantidades) * 1.15)
+
+            # Quitar bordes superiores y derecho para un look más limpio
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_color('#95a5a6')
+            ax.spines['bottom'].set_color('#95a5a6')
+
+            # Ajustar layout
+            fig.tight_layout()
+
+            # Integrar con tkinter
+            self.canvas_widget = FigureCanvasTkAgg(
+                fig, master=self.grafico_frame)
+            self.canvas_widget.draw()
+            self.canvas_widget.get_tk_widget().pack(fill=BOTH, expand=True)
+        except Exception as e:
+            # En caso de error, mostrar mensaje en consola
+            import traceback
+            traceback.print_exc()
+            ttk.Label(
+                self.grafico_frame,
+                text=f"❌ Error al crear gráfico\n{str(e)}",
+                font=("Segoe UI", 10),
+                foreground="red"
+            ).place(relx=0.5, rely=0.5, anchor=CENTER)

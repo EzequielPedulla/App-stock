@@ -11,8 +11,8 @@ class MainWindow(ttk.Window):
     def __init__(self):
         super().__init__(title="Sistema de Gestión de Inventario",
                          themename="flatly",
-                         size=(1200, 700))
-        self.resizable(False, False)
+                         size=(1400, 750))
+        self.resizable(True, True)
         self._setup_custom_styles()
         self._create_widgets()
 

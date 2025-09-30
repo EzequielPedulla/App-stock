@@ -19,11 +19,13 @@ class ReportController:
         total = self._get_total_ventas()
         ultima = self._get_ultima_venta()
         ultimas = self._get_ultimas_ventas()
+        mas_vendidos = self._get_productos_mas_vendidos()
 
         self.report_form.update_data(
             total_ventas=total,
             ultima_venta=ultima,
-            ultimas_ventas=ultimas
+            ultimas_ventas=ultimas,
+            productos_vendidos=mas_vendidos
         )
         self.report_form.update_idletasks()
 
@@ -45,6 +47,21 @@ class ReportController:
             SELECT id, date, total, paid, `change`
             FROM sales
             ORDER BY date DESC
+        """
+        result = self.db.execute_query(query)
+        return result if result else []
+
+    def _get_productos_mas_vendidos(self):
+        """Obtiene los productos más vendidos con cantidad total vendida y monto total"""
+        query = """
+            SELECT p.name as producto, 
+                   SUM(sd.quantity) as cantidad_vendida,
+                   SUM(sd.quantity * sd.unit_price) as monto_total
+            FROM sale_details sd
+            JOIN products p ON sd.product_id = p.id
+            GROUP BY p.id, p.name
+            ORDER BY cantidad_vendida DESC
+            LIMIT 10
         """
         result = self.db.execute_query(query)
         return result if result else []
