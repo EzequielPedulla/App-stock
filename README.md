@@ -111,15 +111,7 @@ App-Stock/
 └── main.py             # Punto de entrada
 ```
 
-## 📋 Requisitos del Sistema
 
-- **Windows 10/11** (para el instalador)
-- **Python 3.11+** (para desarrollo)
-- **MySQL 8.0+** (incluido en el instalador)
-- **4 GB RAM** mínimo
-- **500 MB** espacio en disco
-
-## 🎯 Distribución
 
 ### Para Desarrolladores
 
@@ -139,17 +131,6 @@ App-Stock/
 - [Instrucciones de Instalación](docs/INSTRUCCIONES.txt)
 - [Guía de Creación de Instalador](docs/COMO_CREAR_INSTALADOR.txt)
 
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
 ## 👨‍💻 Autor
 
@@ -157,16 +138,4 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 - GitHub: [@EzequielPedulla](https://github.com/EzequielPedulla)
 - Proyecto: [App-Stock](https://github.com/EzequielPedulla/App-stock)
-
-## 🆕 Changelog
-
-### v1.0.0 (Septiembre 2024)
-
-- ✅ Sistema completo de inventario y ventas
-- ✅ Exportación a PDF y Excel
-- ✅ Anulación de ventas
-- ✅ Artículos varios
-- ✅ Instalador automático
-- ✅ Tests completos
-
 
