@@ -169,6 +169,4 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 - ✅ Instalador automático
 - ✅ Tests completos
 
----
 
-⭐ **¡Si te gusta este proyecto, dale una estrella!** ⭐
