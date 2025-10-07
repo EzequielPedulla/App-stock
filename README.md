@@ -1,141 +1,231 @@
-# 🌐 App Stock Web - Interfaz Web del Sistema de Gestión
+# 🏪 App-Stock | Sistema de Gestión de Inventario
 
-<div align="center">
-  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5">
-  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3">
-  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript">
-  <img src="https://img.shields.io/badge/Status-En%20Desarrollo-green?style=for-the-badge" alt="Status">
-</div>
+> **Aplicación de escritorio completa desarrollada en Python** para la gestión integral de inventario, ventas y reportes empresariales.
 
-## 📝 Descripción
+[![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
+[![Tests](https://img.shields.io/badge/Tests-20%20passed-28a745?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-Interfaz web moderna y responsive para el sistema de gestión de inventario App Stock. Proporciona una experiencia de usuario intuitiva y accesible desde cualquier dispositivo con navegador web.
+---
 
-## ✨ Características
+## 🎯 **Descripción del Proyecto**
 
-- 📱 **Diseño Responsive**: Optimizado para desktop, tablet y móvil
-- 🎨 **UI Moderna**: Interfaz limpia y profesional
-- ⚡ **Interactividad**: JavaScript para una experiencia dinámica
-- 🔍 **Búsqueda en Tiempo Real**: Filtros instantáneos
-- 📊 **Dashboard Visual**: Gráficos y métricas en tiempo real
-- 🌙 **Modo Oscuro**: Tema claro y oscuro
+**App-Stock** es una solución empresarial completa que demuestra mis habilidades en desarrollo de software de escritorio, arquitectura de aplicaciones y gestión de bases de datos. El sistema permite a los negocios gestionar su inventario, procesar ventas y generar reportes profesionales de manera eficiente.
 
-## 🛠️ Tecnologías Utilizadas
+### **¿Por qué este proyecto?**
 
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Estilos**: CSS Grid, Flexbox, Animaciones CSS
-- **Interactividad**: JavaScript Vanilla
-- **Iconos**: Font Awesome
-- **Fuentes**: Google Fonts
+- ✅ **Arquitectura MVC** - Separación clara de responsabilidades
+- ✅ **Base de datos relacional** - Diseño optimizado con MySQL
+- ✅ **Interfaz moderna** - UI profesional con ttkbootstrap
+- ✅ **Testing completo** - Suite de pruebas con pytest
+- ✅ **Distribución** - Instalador automático para usuarios finales
 
-## 🚀 Instalación y Uso
+---
 
-### Opción 1: Servidor Local
+## 🚀 **Demo y Instalación**
 
-1. **Clonar el repositorio**
+### **🎯 Para Usuarios Finales (Recomendado)**
 
-```bash
-git clone https://github.com/EzequielPedulla/app-stock-web.git
-cd app-stock-web
-```
+**Descarga e instala en 3 pasos:**
 
-2. **Servir con Python**
+1. **Descargar instalador** desde [Releases](https://github.com/EzequielPedulla/App-stock/releases)
+2. **Ejecutar como administrador** el archivo `App-Stock-Installer-v1.0.exe`
+3. **¡Listo!** La aplicación se abre automáticamente con base de datos configurada
+
+> ⚡ **Instalación automática** - Incluye MySQL, dependencias y configuración completa
+
+### **👨‍💻 Para Desarrolladores**
 
 ```bash
-# Python 3
-python -m http.server 8000
+# Clonar repositorio
+git clone https://github.com/EzequielPedulla/App-stock.git
+cd App-stock
 
-# Python 2
-python -m SimpleHTTPServer 8000
+# Crear entorno virtual
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Configurar base de datos (opcional - usar SQLite para desarrollo)
+# Crear archivo .env con configuración MySQL
+
+# Ejecutar aplicación
+python main.py
 ```
 
-3. **Abrir en el navegador**
+### **📋 Requisitos del Sistema**
+
+- **Windows 10/11** (instalador) o **Python 3.11+** (desarrollo)
+- **4 GB RAM** mínimo
+- **500 MB** espacio en disco
+- **MySQL 8.0+** (incluido en instalador)
+
+---
+
+## 🛠️ **Stack Tecnológico**
+
+| **Categoría**     | **Tecnologías**                               |
+| ----------------- | --------------------------------------------- |
+| **Backend**       | Python 3.11+, PyMySQL, python-dotenv          |
+| **Frontend**      | tkinter, ttkbootstrap (UI moderna)            |
+| **Base de Datos** | MySQL 8.0+                                    |
+| **Reportes**      | ReportLab (PDF), OpenPyXL (Excel), Matplotlib |
+| **Testing**       | pytest, pytest-cov, pytest-mock               |
+| **Distribución**  | PyInstaller, Inno Setup                       |
+
+---
+
+## 📋 **Funcionalidades Principales**
+
+### **🛍️ Gestión de Inventario**
+
+- CRUD completo de productos con código de barras
+- Control automático de stock con alertas
+- Búsqueda avanzada y filtros
+
+### **💰 Sistema de Ventas**
+
+- Carrito de compras intuitivo
+- Cálculo automático de totales e impuestos
+- Generación de tickets en PDF
+- Artículos "Varios" para productos no registrados
+
+### **📊 Reportes y Análisis**
+
+- Reportes de inventario y ventas
+- Exportación a PDF y Excel con gráficos
+- Historial completo de transacciones
+- Anulación de ventas con reintegro de stock
+
+### **🎨 Interfaz de Usuario**
+
+- Diseño moderno y responsivo
+- Navegación intuitiva por pestañas
+- Temas personalizables
+- Experiencia de usuario optimizada
+
+---
+
+## 🏗️ **Arquitectura del Proyecto**
 
 ```
-http://localhost:8000
+App-Stock/
+├── app/
+│   ├── controllers/     # Lógica de negocio (MVC)
+│   │   ├── product_controller.py
+│   │   ├── sale_controller.py
+│   │   └── report_controller.py
+│   ├── models/          # Modelos de datos
+│   │   ├── database.py
+│   │   └── product.py
+│   ├── services/        # Servicios (exportación)
+│   │   └── export_service.py
+│   └── views/           # Interfaz gráfica
+│       ├── main_window.py
+│       ├── product_form.py
+│       ├── sale_form.py
+│       └── report_form.py
+├── tests/               # Suite de pruebas
+├── docs/                # Documentación
+└── main.py              # Punto de entrada
 ```
 
-### Opción 2: GitHub Pages
+### **Patrones de Diseño Implementados:**
 
-El sitio está disponible en: [https://ezequielpedulla.github.io/app-stock-web/](https://ezequielpedulla.github.io/app-stock-web/)
+- **MVC (Model-View-Controller)** - Separación clara de responsabilidades
+- **Repository Pattern** - Abstracción de acceso a datos
+- **Service Layer** - Lógica de negocio encapsulada
+- **Factory Pattern** - Creación de objetos de exportación
 
-## 📱 Características Responsive
+---
 
-### Desktop (1200px+)
+## 🧪 **Testing y Calidad**
 
-- Layout de 3 columnas
-- Sidebar de navegación fija
-- Tablas completas con todas las columnas
+```bash
+# Ejecutar toda la suite de tests
+pytest
 
-### Tablet (768px - 1199px)
+# Con cobertura de código
+pytest --cov=app --cov-report=html
 
-- Layout de 2 columnas
-- Navegación colapsable
-- Tablas con scroll horizontal
-
-
-## 🎨 Componentes Principales
-
-### Dashboard
-
-- Métricas principales en tiempo real
-- Gráficos de tendencias
-- Alertas de stock bajo
-
-### Gestión de Productos
-
-- Lista de productos con filtros
-- Formularios de creación/edición
-- Búsqueda instantánea
-
-### Reportes
-
-- Generación de reportes
-- Exportación a PDF/Excel
-- Filtros por fecha y categoría
-
-## 📁 Estructura del Proyecto
-
-```
-app-stock-web/
-├── assets/
-│   ├── css/             # Estilos CSS
-│   ├── js/              # JavaScript
-│   ├── images/          # Imágenes y iconos
-│   └── fonts/           # Fuentes personalizadas
-├── pages/               # Páginas HTML
-│   ├── index.html       # Dashboard principal
-│   ├── products.html    # Gestión de productos
-│   ├── reports.html     # Reportes
-│   └── settings.html    # Configuración
-├── components/          # Componentes reutilizables
-└── README.md           # Este archivo
+# Tests específicos
+pytest tests/test_export_service.py -v
+pytest tests/test_cancel_sale.py -v
 ```
 
+**Cobertura de tests:** 20+ tests que cubren:
+
+- ✅ Funcionalidades de exportación
+- ✅ Cancelación de ventas
+- ✅ Integración de componentes
+- ✅ Controladores principales
+
+---
+
+## 📸 **Capturas de Pantalla**
+
+### **Interfaz Principal**
+
+![Interfaz Principal](imagenes/interfaz-principal.jpg)
+_Vista principal del sistema con navegación lateral y gestión de productos_
+
+### **Sistema de Ventas**
+
+![Sistema de Ventas](imagenes/interfaz-ventas.jpg)
+_Interfaz de ventas con carrito de compras y cálculo automático de totales_
+
+### **Reportes y Exportación**
+
+![Reportes](imagenes/interfaz-reportes.jpg)
+_Generación de reportes con gráficos y exportación a PDF/Excel_
+
+---
+
+## 🎯 **Habilidades Demostradas**
+
+### **💻 Desarrollo Backend**
+
+- **Python Avanzado** - POO, decoradores, context managers
+- **Bases de Datos** - Diseño relacional, consultas optimizadas, transacciones
+- **Arquitectura de Software** - Patrones MVC, Repository, Service Layer
+- **APIs y Servicios** - Manejo de dependencias, configuración con .env
+
+### **🎨 Desarrollo Frontend**
+
+- **Interfaces Gráficas** - tkinter, ttkbootstrap, diseño responsivo
+- **UX/UI Design** - Experiencia de usuario intuitiva y moderna
+- **Integración Frontend-Backend** - Comunicación eficiente entre capas
+- **Temas y Estilos** - Personalización visual y consistencia
+
+### **🔧 DevOps y Calidad**
+
+- **Testing Automatizado** - pytest, cobertura de código, mocks
+- **Distribución** - PyInstaller, instaladores automáticos
+- **Gestión de Dependencias** - requirements.txt, entornos virtuales
+- **Documentación** - README profesional, docstrings, guías de instalación
+
+### **📋 Gestión de Proyectos**
+
+- **Control de Versiones** - Git, branching, commits descriptivos
+- **Estructura de Proyecto** - Organización modular y escalable
+- **Código Limpio** - PEP 8, type hints, documentación
+- **Planificación** - Roadmap, features, mejoras futuras
 
 
-## 🎨 Paleta de Colores
 
-```css
-:root {
-  --primary-color: #2f81f7;
-  --secondary-color: #6c757d;
-  --success-color: #28a745;
-  --warning-color: #ffc107;
-  --danger-color: #dc3545;
-  --light-bg: #f8f9fa;
-  --dark-bg: #212529;
-}
-```
+## 📞 **Contacto**
 
+**Ezequiel Pedulla** - Desarrollador Python
 
-## 👨‍💻 Autor
+- 🌐 **GitHub:** [@EzequielPedulla](https://github.com/EzequielPedulla)
+- 📧 **Email:** [ivanpedulla@gmail.com]
+- 💼 **LinkedIn:** [https://www.linkedin.com/in/ezequiel-pedulla-72336b200/]
 
-**Ezequiel Pedulla**
+---
 
-- GitHub: [@EzequielPedulla](https://github.com/EzequielPedulla)
-- LinkedIn: [Ezequiel Pedulla](https://linkedin.com/in/ezequiel-pedulla)
+## 📄 **Licencia**
 
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
