@@ -169,17 +169,17 @@ pytest tests/test_cancel_sale.py -v
 
 ### **Interfaz Principal**
 
-![Interfaz Principal](imagenes/18006e75-bcc3-4509-8323-efd49ebd9c66.png)
+![Interfaz Principal](imagenes/interfaz-principal.jpg)
 _Vista principal del sistema con navegación lateral y gestión de productos_
 
 ### **Sistema de Ventas**
 
-![Sistema de Ventas](imagenes/d5fd5cf7-77fa-470e-bf48-7be821e56715.png)
+![Sistema de Ventas](imagenes/interfaz-ventas.jpg)
 _Interfaz de ventas con carrito de compras y cálculo automático de totales_
 
 ### **Reportes y Exportación**
 
-![Reportes](imagenes/reportes.png)
+![Reportes](imagenes/interfaz-reportes.jpg)
 _Generación de reportes con gráficos y exportación a PDF/Excel_
 
 ---
