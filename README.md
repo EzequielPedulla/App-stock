@@ -1,174 +1,241 @@
-# 🏪 App-Stock - Sistema de Gestión de Inventario y Ventas
+# 🏪 App-Stock | Sistema de Gestión de Inventario
 
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
-![Tests](https://img.shields.io/badge/tests-20%20passed-brightgreen.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+> **Aplicación de escritorio completa desarrollada en Python** para la gestión integral de inventario, ventas y reportes empresariales.
 
-Sistema completo de gestión de inventario, ventas y reportes con exportación a PDF/Excel e impresión de tickets.
+[![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
+[![Tests](https://img.shields.io/badge/Tests-20%20passed-28a745?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-## ✨ Características Principales
+---
 
-- 🛍️ **Gestión de Productos** - CRUD completo con búsqueda y control de stock
-- 💰 **Sistema de Ventas** - Carrito intuitivo con cálculo automático de totales
-- 📊 **Reportes Profesionales** - Exportación a PDF y Excel con gráficos
-- 🎫 **Tickets de Venta** - Generación e impresión automática
-- ❌ **Anulación de Ventas** - Cancelación con reintegro de stock
-- ➕ **Artículos Varios** - Venta de productos no registrados
-- 🎨 **Interfaz Moderna** - Diseño profesional con ttkbootstrap
+## 🎯 **Descripción del Proyecto**
 
-## 🚀 Instalación Rápida
+**App-Stock** es una solución empresarial completa que demuestra mis habilidades en desarrollo de software de escritorio, arquitectura de aplicaciones y gestión de bases de datos. El sistema permite a los negocios gestionar su inventario, procesar ventas y generar reportes profesionales de manera eficiente.
 
-### Opción 1: Instalador Automático (Recomendado)
+### **¿Por qué este proyecto?**
 
-```bash
-# Descargar el instalador desde releases
-# Ejecutar App-Stock-Installer-v1.0.exe como administrador
-# ¡Listo! Todo se configura automáticamente
-```
+- ✅ **Arquitectura MVC** - Separación clara de responsabilidades
+- ✅ **Base de datos relacional** - Diseño optimizado con MySQL
+- ✅ **Interfaz moderna** - UI profesional con ttkbootstrap
+- ✅ **Testing completo** - Suite de pruebas con pytest
+- ✅ **Distribución** - Instalador automático para usuarios finales
 
-### Opción 2: Instalación Manual
+---
+
+## 🚀 **Demo y Instalación**
+
+### **🎯 Para Usuarios Finales (Recomendado)**
+
+**Descarga e instala en 3 pasos:**
+
+1. **Descargar instalador** desde [Releases](https://github.com/EzequielPedulla/App-stock/releases)
+2. **Ejecutar como administrador** el archivo `App-Stock-Installer-v1.0.exe`
+3. **¡Listo!** La aplicación se abre automáticamente con base de datos configurada
+
+> ⚡ **Instalación automática** - Incluye MySQL, dependencias y configuración completa
+
+### **👨‍💻 Para Desarrolladores**
 
 ```bash
 # Clonar repositorio
 git clone https://github.com/EzequielPedulla/App-stock.git
 cd App-stock
 
-# Crear entorno virtual e instalar dependencias
+# Crear entorno virtual
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Instalar dependencias
 pip install -r requirements.txt
 
-# Configurar base de datos
-cp .env.example .env
-# Editar .env con tus credenciales MySQL
+# Configurar base de datos (opcional - usar SQLite para desarrollo)
+# Crear archivo .env con configuración MySQL
 
-# Crear base de datos
-mysql -u root -p -e "CREATE DATABASE app_stock;"
-
-# Ejecutar
+# Ejecutar aplicación
 python main.py
 ```
 
-## 🛠️ Stack Tecnológico
+### **📋 Requisitos del Sistema**
 
-**Backend:** Python 3.11+ • PyMySQL • python-dotenv  
-**Frontend:** tkinter • ttkbootstrap  
-**Reportes:** ReportLab • OpenPyXL • Matplotlib  
-**Testing:** pytest • pytest-cov • pytest-mock  
-**Distribución:** PyInstaller • Inno Setup
+- **Windows 10/11** (instalador) o **Python 3.11+** (desarrollo)
+- **4 GB RAM** mínimo
+- **500 MB** espacio en disco
+- **MySQL 8.0+** (incluido en instalador)
 
-## 📊 Funcionalidades Detalladas
+---
 
-### Gestión de Productos
+## 🛠️ **Stack Tecnológico**
 
-- ✅ Agregar, editar, eliminar productos
-- ✅ Control de stock automático
-- ✅ Búsqueda por código de barras
-- ✅ Alertas de stock bajo
+| **Categoría**     | **Tecnologías**                               |
+| ----------------- | --------------------------------------------- |
+| **Backend**       | Python 3.11+, PyMySQL, python-dotenv          |
+| **Frontend**      | tkinter, ttkbootstrap (UI moderna)            |
+| **Base de Datos** | MySQL 8.0+                                    |
+| **Reportes**      | ReportLab (PDF), OpenPyXL (Excel), Matplotlib |
+| **Testing**       | pytest, pytest-cov, pytest-mock               |
+| **Distribución**  | PyInstaller, Inno Setup                       |
 
-### Sistema de Ventas
+---
 
-- ✅ Carrito de compras intuitivo
-- ✅ Cálculo automático de totales
-- ✅ Tickets de venta en PDF
-- ✅ Impresión directa
-- ✅ Artículos "Varios" para productos no registrados
+## 📋 **Funcionalidades Principales**
 
-### Reportes y Exportación
+### **🛍️ Gestión de Inventario**
 
-- ✅ Reportes completos con gráficos
-- ✅ Exportación a PDF y Excel
-- ✅ Historial de ventas
-- ✅ Anulación de ventas con reintegro de stock
+- CRUD completo de productos con código de barras
+- Control automático de stock con alertas
+- Búsqueda avanzada y filtros
 
-## 🧪 Tests
+### **💰 Sistema de Ventas**
+
+- Carrito de compras intuitivo
+- Cálculo automático de totales e impuestos
+- Generación de tickets en PDF
+- Artículos "Varios" para productos no registrados
+
+### **📊 Reportes y Análisis**
+
+- Reportes de inventario y ventas
+- Exportación a PDF y Excel con gráficos
+- Historial completo de transacciones
+- Anulación de ventas con reintegro de stock
+
+### **🎨 Interfaz de Usuario**
+
+- Diseño moderno y responsivo
+- Navegación intuitiva por pestañas
+- Temas personalizables
+- Experiencia de usuario optimizada
+
+---
+
+## 🏗️ **Arquitectura del Proyecto**
+
+```
+App-Stock/
+├── app/
+│   ├── controllers/     # Lógica de negocio (MVC)
+│   │   ├── product_controller.py
+│   │   ├── sale_controller.py
+│   │   └── report_controller.py
+│   ├── models/          # Modelos de datos
+│   │   ├── database.py
+│   │   └── product.py
+│   ├── services/        # Servicios (exportación)
+│   │   └── export_service.py
+│   └── views/           # Interfaz gráfica
+│       ├── main_window.py
+│       ├── product_form.py
+│       ├── sale_form.py
+│       └── report_form.py
+├── tests/               # Suite de pruebas
+├── docs/                # Documentación
+└── main.py              # Punto de entrada
+```
+
+### **Patrones de Diseño Implementados:**
+
+- **MVC (Model-View-Controller)** - Separación clara de responsabilidades
+- **Repository Pattern** - Abstracción de acceso a datos
+- **Service Layer** - Lógica de negocio encapsulada
+- **Factory Pattern** - Creación de objetos de exportación
+
+---
+
+## 🧪 **Testing y Calidad**
 
 ```bash
-# Ejecutar tests
+# Ejecutar toda la suite de tests
 pytest
 
-# Con cobertura
-pytest --cov=app
+# Con cobertura de código
+pytest --cov=app --cov-report=html
 
 # Tests específicos
 pytest tests/test_export_service.py -v
 pytest tests/test_cancel_sale.py -v
 ```
 
-## 📁 Estructura del Proyecto
+**Cobertura de tests:** 20+ tests que cubren:
 
-```
-App-Stock/
-├── app/
-│   ├── controllers/    # Lógica de negocio
-│   ├── models/         # Modelos y base de datos
-│   ├── services/       # Exportación PDF/Excel
-│   └── views/          # Interfaz gráfica
-├── tests/              # Suite de tests
-├── docs/               # Documentación
-├── installers/         # Scripts de instalación
-├── imagenes/           # Recursos gráficos
-└── main.py             # Punto de entrada
-```
-
-## 📋 Requisitos del Sistema
-
-- **Windows 10/11** (para el instalador)
-- **Python 3.11+** (para desarrollo)
-- **MySQL 8.0+** (incluido en el instalador)
-- **4 GB RAM** mínimo
-- **500 MB** espacio en disco
-
-## 🎯 Distribución
-
-### Para Desarrolladores
-
-- Clona el repositorio
-- Instala dependencias
-- Configura base de datos
-- Ejecuta `python main.py`
-
-### Para Usuarios Finales
-
-- Descarga `App-Stock-Installer-v1.0.exe`
-- Ejecuta como administrador
-- ¡Listo para usar!
-
-## 📖 Documentación
-
-- [Instrucciones de Instalación](docs/INSTRUCCIONES.txt)
-- [Guía de Creación de Instalador](docs/COMO_CREAR_INSTALADOR.txt)
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
-
-## 👨‍💻 Autor
-
-**Ezequiel Pedulla**
-
-- GitHub: [@EzequielPedulla](https://github.com/EzequielPedulla)
-- Proyecto: [App-Stock](https://github.com/EzequielPedulla/App-stock)
-
-## 🆕 Changelog
-
-### v1.0.0 (Septiembre 2024)
-
-- ✅ Sistema completo de inventario y ventas
-- ✅ Exportación a PDF y Excel
-- ✅ Anulación de ventas
-- ✅ Artículos varios
-- ✅ Instalador automático
-- ✅ Tests completos
+- ✅ Funcionalidades de exportación
+- ✅ Cancelación de ventas
+- ✅ Integración de componentes
+- ✅ Controladores principales
 
 ---
 
-⭐ **¡Si te gusta este proyecto, dale una estrella!** ⭐
+## 📸 **Capturas de Pantalla**
+
+### **Interfaz Principal**
+
+![Interfaz Principal](imagenes/18006e75-bcc3-4509-8323-efd49ebd9c66.png)
+_Vista principal del sistema con navegación lateral y gestión de productos_
+
+### **Sistema de Ventas**
+
+![Sistema de Ventas](imagenes/d5fd5cf7-77fa-470e-bf48-7be821e56715.png)
+_Interfaz de ventas con carrito de compras y cálculo automático de totales_
+
+### **Reportes y Exportación**
+
+![Reportes](imagenes/reportes.png)
+_Generación de reportes con gráficos y exportación a PDF/Excel_
+
+---
+
+## 🎯 **Habilidades Demostradas**
+
+### **💻 Desarrollo Backend**
+
+- **Python Avanzado** - POO, decoradores, context managers
+- **Bases de Datos** - Diseño relacional, consultas optimizadas, transacciones
+- **Arquitectura de Software** - Patrones MVC, Repository, Service Layer
+- **APIs y Servicios** - Manejo de dependencias, configuración con .env
+
+### **🎨 Desarrollo Frontend**
+
+- **Interfaces Gráficas** - tkinter, ttkbootstrap, diseño responsivo
+- **UX/UI Design** - Experiencia de usuario intuitiva y moderna
+- **Integración Frontend-Backend** - Comunicación eficiente entre capas
+- **Temas y Estilos** - Personalización visual y consistencia
+
+### **🔧 DevOps y Calidad**
+
+- **Testing Automatizado** - pytest, cobertura de código, mocks
+- **Distribución** - PyInstaller, instaladores automáticos
+- **Gestión de Dependencias** - requirements.txt, entornos virtuales
+- **Documentación** - README profesional, docstrings, guías de instalación
+
+### **📋 Gestión de Proyectos**
+
+- **Control de Versiones** - Git, branching, commits descriptivos
+- **Estructura de Proyecto** - Organización modular y escalable
+- **Código Limpio** - PEP 8, type hints, documentación
+- **Planificación** - Roadmap, features, mejoras futuras
+
+---
+
+## 🚀 **Próximas Mejoras**
+
+- [ ] API REST para integración web
+- [ ] Sistema de usuarios y permisos
+- [ ] Dashboard con métricas en tiempo real
+- [ ] Integración con sistemas de pago
+- [ ] Aplicación móvil complementaria
+
+---
+
+## 📞 **Contacto**
+
+**Ezequiel Pedulla** - Desarrollador Python
+
+- 🌐 **GitHub:** [@EzequielPedulla](https://github.com/EzequielPedulla)
+- 📧 **Email:** [ivanpedulla@gmail.com]
+- 💼 **LinkedIn:** [https://www.linkedin.com/in/ezequiel-pedulla-72336b200/]
+
+---
+
+## 📄 **Licencia**
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
