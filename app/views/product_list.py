@@ -105,10 +105,20 @@ class ProductList(ttk.Frame):
             self._display_products(self.all_products)
             self.info_label.configure(text="")
         else:
-            # Filtrar productos
-            filtered = [p for p in self.all_products
-                        if search_term in p.barcode.lower() or
-                        search_term in p.name.lower()]
+            # Priorizar coincidencias de código de barras (así se busca al
+            # escanear/tipear un código) por sobre las de nombre, para que
+            # nombres con números (ej. "7UP", "1890 CERVEZA") no ensucien
+            # el resultado cuando en realidad se está buscando un código.
+            barcode_matches = [
+                p for p in self.all_products
+                if p.barcode.lower().startswith(search_term)]
+            barcode_match_set = set(barcode_matches)
+            other_matches = [
+                p for p in self.all_products
+                if p not in barcode_match_set and (
+                    search_term in p.barcode.lower() or
+                    search_term in p.name.lower())]
+            filtered = barcode_matches + other_matches
             self._display_products(filtered)
 
             # Actualizar info
