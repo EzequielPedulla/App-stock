@@ -514,15 +514,9 @@ class SaleForm(ttk.Frame):
 
         def confirm_varios():
             """Confirma y agrega el artículo varios."""
-            name = name_entry.get().strip()
+            name = name_entry.get().strip() or "Varios"
             price_str = price_entry.get().strip()
             qty_str = qty_entry.get().strip()
-
-            # Validaciones
-            if not name:
-                messagebox.showerror("Error", "Ingrese el nombre del artículo")
-                name_entry.focus()
-                return
 
             try:
                 price = float(price_str)

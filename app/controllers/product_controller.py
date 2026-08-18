@@ -25,10 +25,10 @@ class ProductController:
         try:
             data = self.product_form.get_product_data()
 
-            # Validar datos
-            if not all([data['barcode'], data['name'], data['price'], data['stock']]):
+            # Validar datos (el stock es opcional, por defecto 0)
+            if not all([data['barcode'], data['name'], data['price']]):
                 messagebox.showerror(
-                    "Error", "Todos los campos son obligatorios")
+                    "Error", "Código de barras, nombre y precio son obligatorios")
                 return
 
             # Verificar si el código de barras ya existe (solo si es diferente al actual)
@@ -46,7 +46,7 @@ class ProductController:
                 barcode=data['barcode'],
                 name=data['name'],
                 price=float(data['price']),
-                stock=int(data['stock']),
+                stock=int(data['stock']) if data['stock'] else 0,
                 id=self.selected_product.id if self.selected_product and self.product_form.editing_mode else None
             )
 
