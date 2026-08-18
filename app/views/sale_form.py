@@ -569,3 +569,104 @@ class SaleForm(ttk.Frame):
 
         # Enter para confirmar
         dialog.bind('<Return>', lambda e: confirm_varios())
+
+    def show_register_product_dialog(self, barcode: str) -> None:
+        """Muestra un diálogo para registrar en el inventario un código de
+        barras que no fue encontrado, sin pedir stock (no se usa acá)."""
+        dialog = ttk.Toplevel(self)
+        dialog.title("Registrar Producto")
+        dialog.geometry("450x280")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Centrar la ventana
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=BOTH, expand=True)
+
+        ttk.Label(
+            main_frame,
+            text="🆕 Registrar Producto",
+            font=("Segoe UI", 16, "bold")
+        ).pack(pady=(0, 15))
+
+        ttk.Label(
+            main_frame,
+            text=f"Código de barras: {barcode}",
+            font=("Segoe UI", 11),
+            foreground="gray"
+        ).pack(pady=(0, 15))
+
+        ttk.Label(
+            main_frame,
+            text="Nombre del producto:",
+            font=("Segoe UI", 11)
+        ).pack(anchor=W, pady=(0, 5))
+
+        name_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        name_entry.pack(fill=X, pady=(0, 15))
+        name_entry.focus()
+
+        ttk.Label(
+            main_frame,
+            text="Precio:",
+            font=("Segoe UI", 11)
+        ).pack(anchor=W, pady=(0, 5))
+
+        price_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        price_entry.pack(fill=X, pady=(0, 15))
+
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=X, pady=(15, 0))
+
+        def confirm_register():
+            """Confirma el registro del producto."""
+            name = name_entry.get().strip()
+            price_str = price_entry.get().strip()
+
+            if not name:
+                messagebox.showerror("Error", "Ingrese el nombre del producto")
+                name_entry.focus()
+                return
+
+            try:
+                price = float(price_str)
+                if price <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messagebox.showerror("Error", "Ingrese un precio válido")
+                price_entry.focus()
+                return
+
+            self.register_data = {
+                'barcode': barcode,
+                'name': name,
+                'price': price,
+            }
+            dialog.destroy()
+            self.event_generate("<<RegisterProduct>>")
+
+        ttk.Button(
+            button_frame,
+            text="Registrar",
+            bootstyle="success",
+            command=confirm_register,
+            width=15
+        ).pack(side=RIGHT, padx=(5, 0))
+
+        ttk.Button(
+            button_frame,
+            text="Cancelar",
+            bootstyle="secondary",
+            command=dialog.destroy,
+            width=15
+        ).pack(side=RIGHT)
+
+        dialog.bind('<Return>', lambda e: confirm_register())

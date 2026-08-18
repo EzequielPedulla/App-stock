@@ -6,6 +6,7 @@ import datetime
 import os
 
 from ..models.database import Database
+from ..models.product import Product
 from ..services.export_service import ExportService
 
 
@@ -50,6 +51,9 @@ class SaleController:
         self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
         # Conectar evento de artículo varios
         self.sale_form.bind("<<AddVarios>>", lambda e: self.add_varios())
+        # Conectar evento de registro rápido de producto no encontrado
+        self.sale_form.bind(
+            "<<RegisterProduct>>", lambda e: self.register_product())
 
     def _on_select_item(self, event) -> None:
         """Maneja el evento cuando se selecciona un item en la tabla.
@@ -278,6 +282,39 @@ class SaleController:
             f"Artículo '{data['name']}' agregado al carrito"
         )
 
+    def register_product(self) -> None:
+        """Registra en el inventario un código escaneado que no existía, y
+        lo agrega a la venta actual con la cantidad ya cargada en el
+        formulario (sin pedir stock: no se controla en el uso real)."""
+        if not hasattr(self.sale_form, 'register_data'):
+            return
+
+        data = self.sale_form.register_data
+        delattr(self.sale_form, 'register_data')
+
+        if self.db.get_product_by_barcode(data['barcode']):
+            messagebox.showerror(
+                "Error", "Ya existe un producto con ese código de barras")
+            return
+
+        new_product = Product(
+            barcode=data['barcode'],
+            name=data['name'],
+            price=data['price'],
+            stock=0
+        )
+        self.db.add_product(new_product)
+        self._update_product_list()
+
+        messagebox.showinfo(
+            "Producto registrado",
+            f"'{data['name']}' se guardó en el inventario."
+        )
+
+        # El barcode y la cantidad siguen cargados en el formulario:
+        # continuar el flujo normal para sumarlo a la venta.
+        self.add_item()
+
     def add_item(self):
         # Obtener y limpiar los valores
         barcode = self.sale_form.barcode_entry.get().strip()
@@ -302,9 +339,17 @@ class SaleController:
         # Buscar producto
         product = self.db.get_product_by_barcode(barcode)
         if not product:
-            messagebox.showerror("Error", "Producto no encontrado")
-            self.sale_form.barcode_entry.delete(0, 'end')
-            self.sale_form.barcode_entry.focus()
+            if messagebox.askyesno(
+                "Producto no encontrado",
+                f"El código '{barcode}' no está registrado.\n\n"
+                "¿Desea registrarlo ahora?"
+            ):
+                # No se limpia el formulario: barcode/cantidad quedan
+                # cargados para agregarlo a la venta apenas se registre.
+                self.sale_form.show_register_product_dialog(barcode)
+            else:
+                self.sale_form.barcode_entry.delete(0, 'end')
+                self.sale_form.barcode_entry.focus()
             return
 
         # Ver si ya está en la lista
@@ -412,7 +457,6 @@ class SaleController:
                 # Si es un artículo "varios", crear producto temporal único
                 if item.get('is_varios', False):
                     # Crear producto con el nombre real del artículo varios
-                    from ..models.product import Product
                     import random
 
                     # Generar código corto único (máximo 13 caracteres)
