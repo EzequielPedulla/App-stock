@@ -222,30 +222,19 @@ class SaleController:
         qty = int(values[2])
 
         if messagebox.askyesno("Confirmar", "¿Desea eliminar este producto de la venta?"):
-            # print(f"Eliminando producto: {barcode}, cantidad: {qty}")
-            # print(f"Items antes de eliminar: {len(self.items)}")
-
             if barcode in self.temp_stock:
                 self.temp_stock[barcode] -= qty
                 if self.temp_stock[barcode] <= 0:
                     del self.temp_stock[barcode]
 
-            # print(f"Buscando para eliminar: '{barcode}' (tipo: {type(barcode)})")
-            # for item in self.items:
-            #     print(f"  Item en lista: '{item['barcode']}' (tipo: {type(item['barcode'])})")
-
             self.items = [
                 item for item in self.items if str(item['barcode']) != str(barcode)]
-
-            # print(f"Items después de eliminar: {len(self.items)}")
 
             self._update_table()
 
             if not self.items:
                 self.sale_form.edit_button.configure(state="disabled")
                 self.sale_form.delete_button.configure(state="disabled")
-
-            messagebox.showinfo("Éxito", "Producto eliminado de la venta.")
 
     def add_varios(self) -> None:
         """Agrega un artículo 'varios' sin registro en inventario."""
@@ -277,11 +266,6 @@ class SaleController:
         # Limpiar datos temporales
         delattr(self.sale_form, 'varios_data')
 
-        messagebox.showinfo(
-            "Éxito",
-            f"Artículo '{data['name']}' agregado al carrito"
-        )
-
     def register_product(self) -> None:
         """Registra en el inventario un código escaneado que no existía, y
         lo agrega a la venta actual con la cantidad ya cargada en el
@@ -305,11 +289,6 @@ class SaleController:
         )
         self.db.add_product(new_product)
         self._update_product_list()
-
-        messagebox.showinfo(
-            "Producto registrado",
-            f"'{data['name']}' se guardó en el inventario."
-        )
 
         # El barcode y la cantidad siguen cargados en el formulario:
         # continuar el flujo normal para sumarlo a la venta.

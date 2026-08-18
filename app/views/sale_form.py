@@ -562,7 +562,10 @@ class SaleForm(ttk.Frame):
         ).pack(side=RIGHT)
 
         # Enter para confirmar
-        dialog.bind('<Return>', lambda e: confirm_varios())
+        # "break" corta la propagación: sin esto, el mismo Enter también
+        # dispara el atajo global de "Confirmar Venta" (bind_all en la
+        # ventana principal) apenas se cierra este diálogo.
+        dialog.bind('<Return>', lambda e: confirm_varios() or "break")
 
     def show_register_product_dialog(self, barcode: str) -> None:
         """Muestra un diálogo para registrar en el inventario un código de
@@ -663,4 +666,7 @@ class SaleForm(ttk.Frame):
             width=15
         ).pack(side=RIGHT)
 
-        dialog.bind('<Return>', lambda e: confirm_register())
+        # "break" corta la propagación: sin esto, el mismo Enter también
+        # dispara el atajo global de "Confirmar Venta" apenas se cierra
+        # este diálogo.
+        dialog.bind('<Return>', lambda e: confirm_register() or "break")

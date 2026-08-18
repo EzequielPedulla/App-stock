@@ -53,11 +53,8 @@ class ProductController:
             # Guardar o actualizar
             if self.selected_product and self.product_form.editing_mode:
                 self.db.update_product(product)
-                messagebox.showinfo(
-                    "Éxito", "Producto actualizado correctamente")
             else:
                 self.db.add_product(product)
-                messagebox.showinfo("Éxito", "Producto agregado correctamente")
 
             # Limpiar y recargar
             self.product_form.clear_fields()
@@ -142,8 +139,6 @@ class ProductController:
                 self.product_form.clear_fields()
                 self.load_products()
                 self.product_form.set_action_buttons_state("disabled")
-                messagebox.showinfo(
-                    "Éxito", "Producto eliminado correctamente")
         except Exception as e:
             messagebox.showerror(
                 "Error", f"Error al eliminar el producto: {str(e)}")
