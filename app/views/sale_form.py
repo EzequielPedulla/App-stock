@@ -530,7 +530,7 @@ class SaleForm(ttk.Frame):
 
         def confirm_varios():
             """Confirma y agrega el artículo varios."""
-            name = name_entry.get().strip() or "Varios"
+            name = name_entry.get().strip().upper() or "VARIOS"
             price_str = price_entry.get().strip()
             qty_str = qty_entry.get().strip()
 
@@ -641,7 +641,7 @@ class SaleForm(ttk.Frame):
 
         def confirm_register():
             """Confirma el registro del producto."""
-            name = name_entry.get().strip()
+            name = name_entry.get().strip().upper()
             price_str = price_entry.get().strip()
 
             if not name:

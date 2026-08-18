@@ -71,7 +71,7 @@ class ProductForm(ttk.Frame):
     def get_product_data(self):
         return {
             'barcode': self.barcode_entry.get(),
-            'name': self.name_entry.get(),
+            'name': self.name_entry.get().upper(),
             'price': self.price_entry.get(),
             'stock': self.stock_entry.get()
         }
