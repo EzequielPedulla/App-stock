@@ -487,7 +487,6 @@ class SaleForm(ttk.Frame):
 
         name_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
         name_entry.pack(fill=X, pady=(0, 15))
-        name_entry.focus()
 
         # Frame para precio y cantidad
         grid_frame = ttk.Frame(main_frame)
@@ -502,6 +501,9 @@ class SaleForm(ttk.Frame):
 
         price_entry = ttk.Entry(grid_frame, font=("Segoe UI", 12))
         price_entry.grid(row=1, column=0, sticky=EW, padx=(0, 10))
+        # El nombre es opcional (por defecto "Varios"), así que el cursor
+        # arranca en precio en vez de nombre.
+        price_entry.focus()
         grid_frame.columnconfigure(0, weight=1)
 
         # Campo: Cantidad
