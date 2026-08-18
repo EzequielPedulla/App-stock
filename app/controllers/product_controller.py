@@ -31,15 +31,16 @@ class ProductController:
                     "Error", "Código de barras, nombre y precio son obligatorios")
                 return
 
-            # Verificar si el código de barras ya existe (solo si es diferente al actual)
-            if self.selected_product and self.product_form.editing_mode:
-                if data['barcode'] != self.selected_product.barcode:
-                    existing_product = self.db.get_product_by_barcode(
-                        data['barcode'])
-                    if existing_product:
-                        messagebox.showerror(
-                            "Error", "Ya existe un producto con ese código de barras")
-                        return
+            # Verificar si el código de barras ya existe. Al agregar un
+            # producto nuevo siempre hay que chequearlo; al editar, solo si
+            # se cambió el código (si no, encontraría el propio producto).
+            is_editing = self.selected_product and self.product_form.editing_mode
+            barcode_changed = not is_editing or data['barcode'] != self.selected_product.barcode
+
+            if barcode_changed and self.db.get_product_by_barcode(data['barcode']):
+                messagebox.showerror(
+                    "Error", "Ya existe un producto con ese código de barras")
+                return
 
             # Crear producto
             product = Product(
