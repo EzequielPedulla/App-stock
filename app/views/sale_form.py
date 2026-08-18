@@ -328,7 +328,7 @@ class SaleForm(ttk.Frame):
         # Crear ventana modal
         self._payment_dialog = ttk.Toplevel(self)
         self._payment_dialog.title("Pago")
-        self._payment_dialog.geometry("400x300")
+        self._payment_dialog.geometry("400x360")
         self._payment_dialog.resizable(False, False)
         self._payment_dialog.transient(self)
         self._payment_dialog.grab_set()
@@ -363,6 +363,32 @@ class SaleForm(ttk.Frame):
             font=("Segoe UI", 12)
         ).pack(pady=(0, 10))
 
+        # Método de pago (por defecto Efectivo)
+        self.payment_method = 'efectivo'
+
+        ttk.Label(
+            main_frame,
+            text="Método de pago:",
+            font=("Segoe UI", 11)
+        ).pack(anchor=W, pady=(0, 5))
+
+        method_row = ttk.Frame(main_frame)
+        method_row.pack(fill=X, pady=(0, 15))
+
+        method_buttons = {}
+        for method, label in (
+            ('efectivo', 'Efectivo'),
+            ('transferencia', 'Transferencia'),
+            ('posnet', 'Posnet'),
+        ):
+            btn = ttk.Button(
+                method_row, text=label, width=13,
+                bootstyle="primary" if method == 'efectivo' else "secondary",
+                command=lambda m=method: select_method(m)
+            )
+            btn.pack(side=LEFT, padx=(0, 5))
+            method_buttons[method] = btn
+
         # Frame para el monto pagado
         payment_frame = ttk.Frame(main_frame)
         payment_frame.pack(fill=X, pady=(0, 10))
@@ -395,6 +421,24 @@ class SaleForm(ttk.Frame):
                     change_label.configure(text="Monto insuficiente")
             except ValueError:
                 change_label.configure(text="Monto inválido")
+
+        def select_method(method):
+            """Cambia el método de pago. Transferencia/Posnet se pagan
+            justo (sin vuelto), así que el monto se completa solo."""
+            self.payment_method = method
+            for m, btn in method_buttons.items():
+                btn.configure(bootstyle="primary" if m == method else "secondary")
+
+            if method == 'efectivo':
+                payment_entry.configure(state='normal')
+                payment_entry.delete(0, 'end')
+                change_label.configure(text="Vuelto: $0.00")
+            else:
+                payment_entry.configure(state='normal')
+                payment_entry.delete(0, 'end')
+                payment_entry.insert(0, f"{total:.2f}")
+                payment_entry.configure(state='disabled')
+                change_label.configure(text="Pago exacto (sin vuelto)")
 
         # Vincular el cálculo al cambio en el entry
         payment_entry.bind('<KeyRelease>', lambda e: calculate_change())

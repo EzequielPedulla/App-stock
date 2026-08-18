@@ -45,6 +45,7 @@ class Database:
                 total REAL NOT NULL,
                 paid REAL NOT NULL,
                 `change` REAL NOT NULL,
+                payment_method VARCHAR(20) NOT NULL DEFAULT 'efectivo',
                 status VARCHAR(20) DEFAULT 'active',
                 cancelled_at DATETIME NULL,
                 cancellation_reason TEXT NULL
@@ -62,7 +63,20 @@ class Database:
                 FOREIGN KEY (product_id) REFERENCES products(id)
             )
         ''')
+
+        self._migrate_add_payment_method_column()
         self.connection.commit()
+
+    def _migrate_add_payment_method_column(self):
+        """Agrega payment_method a bases creadas antes de que existiera esta
+        columna (CREATE TABLE IF NOT EXISTS no la agrega sola)."""
+        self.cursor.execute("PRAGMA table_info(sales)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if 'payment_method' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE sales ADD COLUMN payment_method "
+                "VARCHAR(20) NOT NULL DEFAULT 'efectivo'"
+            )
 
     def add_product(self, product, commit=True):
         self.cursor.execute('''
@@ -102,10 +116,12 @@ class Database:
         row = self.cursor.fetchone()
         return Product.from_db_dict(dict(row)) if row else None
 
-    def add_sale(self, date: str, total: float, paid: float, change: float, commit=True) -> int:
+    def add_sale(self, date: str, total: float, paid: float, change: float,
+                 payment_method: str = 'efectivo', commit=True) -> int:
         self.cursor.execute(
-            '''INSERT INTO sales (date, total, paid, `change`) VALUES (?, ?, ?, ?)''',
-            (date, total, paid, change)
+            '''INSERT INTO sales (date, total, paid, `change`, payment_method)
+               VALUES (?, ?, ?, ?, ?)''',
+            (date, total, paid, change, payment_method)
         )
         if commit:
             self.connection.commit()

@@ -472,6 +472,7 @@ class SaleController:
             # Obtener datos de pago
             paid = getattr(self.sale_form, 'paid', 0.0)
             change = getattr(self.sale_form, 'change', 0.0)
+            payment_method = getattr(self.sale_form, 'payment_method', 'efectivo')
             total = sum(float(item['subtotal']) for item in self.items)
             date = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
 
@@ -479,7 +480,8 @@ class SaleController:
             # si algo falla a mitad de camino, se revierte todo (rollback) en vez
             # de dejar una venta a medio registrar.
             sale_id = self.db.add_sale(
-                date=date, total=total, paid=paid, change=change, commit=False)
+                date=date, total=total, paid=paid, change=change,
+                payment_method=payment_method, commit=False)
 
             # Registrar los detalles de la venta
             for item in self.items:
