@@ -328,7 +328,7 @@ class SaleForm(ttk.Frame):
         # Crear ventana modal
         self._payment_dialog = ttk.Toplevel(self)
         self._payment_dialog.title("Pago")
-        self._payment_dialog.geometry("400x360")
+        self._payment_dialog.geometry("400x400")
         self._payment_dialog.resizable(False, False)
         self._payment_dialog.transient(self)
         self._payment_dialog.grab_set()
@@ -374,19 +374,23 @@ class SaleForm(ttk.Frame):
 
         method_row = ttk.Frame(main_frame)
         method_row.pack(fill=X, pady=(0, 15))
+        method_row.columnconfigure(0, weight=1)
+        method_row.columnconfigure(1, weight=1)
 
         method_buttons = {}
-        for method, label in (
+        for i, (method, label) in enumerate((
             ('efectivo', 'Efectivo'),
             ('transferencia', 'Transferencia'),
             ('posnet', 'Posnet'),
-        ):
+            ('fiado', 'No pago (fiado)'),
+        )):
+            row, col = divmod(i, 2)
             btn = ttk.Button(
-                method_row, text=label, width=13,
+                method_row, text=label, width=16,
                 bootstyle="primary" if method == 'efectivo' else "secondary",
                 command=lambda m=method: select_method(m)
             )
-            btn.pack(side=LEFT, padx=(0, 5))
+            btn.grid(row=row, column=col, padx=(0, 5), pady=(0, 5), sticky='ew')
             method_buttons[method] = btn
 
         # Frame para el monto pagado
@@ -423,19 +427,25 @@ class SaleForm(ttk.Frame):
                 change_label.configure(text="Monto inválido")
 
         def select_method(method):
-            """Cambia el método de pago. Transferencia/Posnet se pagan
-            justo (sin vuelto), así que el monto se completa solo."""
+            """Cambia el método de pago.
+            - Efectivo: se tipea el monto y se calcula el vuelto.
+            - Transferencia/Posnet: se pagan justo, sin vuelto, así que el
+              monto se completa solo con el total.
+            - Fiado: no se cobra nada ahora, el monto queda en $0."""
             self.payment_method = method
             for m, btn in method_buttons.items():
                 btn.configure(bootstyle="primary" if m == method else "secondary")
 
+            payment_entry.configure(state='normal')
+            payment_entry.delete(0, 'end')
+
             if method == 'efectivo':
-                payment_entry.configure(state='normal')
-                payment_entry.delete(0, 'end')
                 change_label.configure(text="Vuelto: $0.00")
+            elif method == 'fiado':
+                payment_entry.insert(0, "0.00")
+                payment_entry.configure(state='disabled')
+                change_label.configure(text="Fiado (sin cobrar)")
             else:
-                payment_entry.configure(state='normal')
-                payment_entry.delete(0, 'end')
                 payment_entry.insert(0, f"{total:.2f}")
                 payment_entry.configure(state='disabled')
                 change_label.configure(text="Pago exacto (sin vuelto)")
@@ -450,12 +460,14 @@ class SaleForm(ttk.Frame):
         def confirm_payment():
             try:
                 paid = float(payment_entry.get() or 0)
-                if paid < total:
+                # El fiado se paga $0 a propósito: no aplica el chequeo de
+                # monto insuficiente.
+                if self.payment_method != 'fiado' and paid < total:
                     messagebox.showerror(
                         "Error", "El monto pagado es insuficiente")
                     return
                 self.paid = paid
-                self.change = paid - total
+                self.change = paid - total if self.payment_method == 'efectivo' else 0.0
                 self._payment_dialog.destroy()
                 self._payment_dialog = None
                 self.event_generate("<<ConfirmSale>>")
