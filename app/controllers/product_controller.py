@@ -18,6 +18,8 @@ class ProductController:
             '<<TreeviewSelect>>', self.on_select_product)
         self.product_list.tabla.bind(
             '<Delete>', lambda e: self.delete_product())
+        self.product_list.tabla.bind(
+            '<Double-1>', self.on_double_click_product)
 
         # Cargar productos
         self.load_products()
@@ -102,6 +104,16 @@ class ProductController:
             self.product_form.set_action_buttons_state("normal")
         else:
             self.product_form.set_action_buttons_state("disabled")
+
+    def on_double_click_product(self, event) -> None:
+        """Doble clic en una fila pasa directo a modo edición."""
+        item_id = self.product_list.tabla.identify('item', event.x, event.y)
+        if not item_id:
+            return
+        self.product_list.tabla.selection_set(item_id)
+        self.on_select_product(event)
+        if self.selected_product:
+            self.start_edit()
 
     def start_edit(self):
         if not self.selected_product:
