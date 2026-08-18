@@ -415,6 +415,12 @@ class SaleForm(ttk.Frame):
 
     def _on_enter_pressed(self, event) -> None:
         """Maneja el evento cuando se presiona Enter en la ventana principal."""
+        # Este binding es global (bind_all), así que sin este chequeo
+        # cualquier Enter en OTRA pestaña (ej. guardar un producto) también
+        # termina abriendo el diálogo de confirmar venta.
+        if not self.winfo_ismapped():
+            return
+
         # Si el foco está en los campos de entrada, no hacer nada
         if event.widget in (self.barcode_entry, self.qty_entry):
             return
