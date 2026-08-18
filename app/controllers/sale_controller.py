@@ -6,7 +6,6 @@ import datetime
 import os
 
 from ..models.database import Database
-from ..models.product import Product
 from ..services.export_service import ExportService
 
 
@@ -34,6 +33,7 @@ class SaleController:
         self.export_service = ExportService()
         self.items = []
         self.temp_stock = {}
+        self._varios_counter = 0
         self._connect_events()
 
     def _connect_events(self):
@@ -111,6 +111,18 @@ class SaleController:
         current_qty = int(values[2])  # La cantidad está en la tercera columna
         # El código de barras está en la primera columna
         barcode = str(values[0])
+
+        # Los artículos "Varios" no tienen un producto real detrás, así que
+        # no hay datos que recargar para editarlos.
+        cart_item = next(
+            (i for i in self.items if str(i['barcode']) == barcode), None)
+        if cart_item and cart_item.get('is_varios', False):
+            messagebox.showinfo(
+                "No editable",
+                "Los artículos 'Varios' no se pueden editar.\n"
+                "Eliminelo y agréguelo de nuevo con los datos correctos."
+            )
+            return
 
         # Cargar datos en el formulario
         self.sale_form.clear_fields()
@@ -264,9 +276,15 @@ class SaleController:
 
         data = self.sale_form.varios_data
 
+        # Cada "varios" necesita un código propio dentro del carrito: si todos
+        # comparten el literal "VARIOS", borrar o editar uno afecta a todos
+        # los demás (se buscan/filtran por barcode).
+        self._varios_counter += 1
+        varios_cart_code = f"VARIOS-{self._varios_counter}"
+
         # Agregar a la lista de items
         new_item = {
-            'barcode': 'VARIOS',  # Mostrar "VARIOS" en vez del código generado
+            'barcode': varios_cart_code,
             'name': data['name'],  # Nombre real que puso el usuario
             'qty': data['qty'],
             'price': float(data['price']),
@@ -548,7 +566,7 @@ class SaleController:
                        (sd.quantity * sd.unit_price) as subtotal
                 FROM sale_details sd
                 JOIN products p ON sd.product_id = p.id
-                WHERE sd.sale_id = %s
+                WHERE sd.sale_id = ?
                 ORDER BY sd.id
             """
             details = self.db.execute_query(query, (sale_id,))

@@ -1,6 +1,5 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-import tkinter as tk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -481,10 +480,10 @@ class ReportForm(ttk.Frame):
         """Maneja el clic en el botón de exportar ticket de venta"""
         if self.report_controller:
             # Obtener datos completos de la venta
-            query = f"SELECT paid, `change` FROM sales WHERE id = {sale_id}"
+            query = "SELECT paid, `change` FROM sales WHERE id = ?"
             from ..models.database import Database
             db = Database()
-            result = db.execute_query(query)
+            result = db.execute_query(query, (sale_id,))
 
             if result:
                 sale_paid = float(result[0]['paid'])

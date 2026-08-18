@@ -2,7 +2,6 @@
 
 from typing import Any
 from tkinter import messagebox
-import tkinter.filedialog as filedialog
 import os
 
 from ..models.database import Database
@@ -121,7 +120,7 @@ class ReportController:
                    sd.unit_price as precio, (sd.quantity * sd.unit_price) as subtotal
             FROM sale_details sd
             JOIN products p ON sd.product_id = p.id
-            WHERE sd.sale_id = %s
+            WHERE sd.sale_id = ?
             ORDER BY sd.id
         """
         result = self.db.execute_query(query, (sale_id,))
@@ -282,7 +281,7 @@ class ReportController:
             sale_id: ID de la venta a anular
         """
         # Verificar si la venta ya está anulada
-        query = "SELECT status FROM sales WHERE id = %s"
+        query = "SELECT status FROM sales WHERE id = ?"
         result = self.db.execute_query(query, (sale_id,))
 
         if not result:
