@@ -82,23 +82,6 @@ class SaleController:
         if self.product_list:
             self.product_list.refresh()
 
-    def _get_available_stock(self, barcode: str) -> int:
-        """Obtiene el stock disponible considerando el stock temporal.
-
-        Args:
-            barcode: El código de barras del producto.
-
-        Returns:
-            El stock disponible real.
-        """
-        product = self.db.get_product_by_barcode(barcode)
-        if not product:
-            return 0
-
-        # Obtener el stock temporal reservado
-        temp_reserved = self.temp_stock.get(barcode, 0)
-        return product.stock - temp_reserved
-
     def edit_item(self) -> None:
         """Edita la cantidad del item seleccionado."""
         selected_items = self.sale_form.tree.selection()
@@ -178,55 +161,46 @@ class SaleController:
                 if self.temp_stock[barcode] <= 0:
                     del self.temp_stock[barcode]
 
-            # Verificar si hay suficiente stock disponible para la nueva cantidad
-            available_stock = product.stock
+            try:
+                # Actualizar el stock temporal con la nueva cantidad
+                self.temp_stock[barcode] = self.temp_stock.get(
+                    barcode, 0) + new_qty
 
-            if available_stock >= new_qty:
-                try:
-                    # Actualizar el stock temporal con la nueva cantidad
-                    self.temp_stock[barcode] = self.temp_stock.get(
-                        barcode, 0) + new_qty
+                # Actualizar la cantidad en la lista de items
+                item_updated = False
 
-                    # Actualizar la cantidad en la lista de items
-                    item_updated = False
+                for item in self.items:
+                    if str(item['barcode']) == barcode:
+                        # Actualizar cantidad y subtotal
+                        item['qty'] = new_qty
+                        item['subtotal'] = new_qty * float(item['price'])
+                        item_updated = True
+                        break
 
-                    for item in self.items:
-                        if str(item['barcode']) == barcode:
-                            # Actualizar cantidad y subtotal
-                            item['qty'] = new_qty
-                            item['subtotal'] = new_qty * float(item['price'])
-                            item_updated = True
-                            break
+                if not item_updated:
+                    return
 
-                    if not item_updated:
-                        return
+                # Actualizar la tabla y el total
+                self._update_table()
 
-                    # Actualizar la tabla y el total
-                    self._update_table()
-
-                    # Restaurar el formulario
-                    self.sale_form.clear_fields()
-                    self.sale_form.barcode_entry.configure(state="normal")
-                    self.sale_form.add_button.configure(
-                        text="Agregar",
-                        command=self.add_item
-                    )
-
-                    # Deshabilitar botones de acción
-                    self.sale_form.set_action_buttons_state("disabled")
-
-                    # Limpiar la selección de la tabla
-                    for item in self.sale_form.tree.selection():
-                        self.sale_form.tree.selection_remove(item)
-
-                except Exception as e:
-                    messagebox.showerror(
-                        "Error", f"Error al actualizar la cantidad: {str(e)}")
-            else:
-                messagebox.showerror(
-                    "Error",
-                    f"No hay suficiente stock disponible\nStock disponible: {available_stock}"
+                # Restaurar el formulario
+                self.sale_form.clear_fields()
+                self.sale_form.barcode_entry.configure(state="normal")
+                self.sale_form.add_button.configure(
+                    text="Agregar",
+                    command=self.add_item
                 )
+
+                # Deshabilitar botones de acción
+                self.sale_form.set_action_buttons_state("disabled")
+
+                # Limpiar la selección de la tabla
+                for item in self.sale_form.tree.selection():
+                    self.sale_form.tree.selection_remove(item)
+
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"Error al actualizar la cantidad: {str(e)}")
         except ValueError:
             messagebox.showerror("Error", "Ingrese una cantidad válida")
 
@@ -333,25 +307,9 @@ class SaleController:
             self.sale_form.barcode_entry.focus()
             return
 
-        # Verificar stock disponible
-        available_stock = self._get_available_stock(barcode)
-        if available_stock < qty:
-            messagebox.showerror(
-                "Error",
-                f"No hay suficiente stock disponible\nStock disponible: {available_stock}"
-            )
-            return
-
         # Ver si ya está en la lista
         for item in self.items:
             if item['barcode'] == barcode:
-                # Verificar si hay suficiente stock para la cantidad adicional
-                if available_stock < qty:
-                    messagebox.showerror(
-                        "Error",
-                        f"No hay suficiente stock disponible\nStock disponible: {available_stock}"
-                    )
-                    return
                 # Actualizar stock temporal
                 self.temp_stock[barcode] = self.temp_stock.get(
                     barcode, 0) + qty
