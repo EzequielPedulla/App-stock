@@ -164,6 +164,7 @@ desktop.ini
 # Distribution files (keep only source)
 distribucion/
 build/
+installers/*.exe
 
 # Temporary files
 *.tmp
