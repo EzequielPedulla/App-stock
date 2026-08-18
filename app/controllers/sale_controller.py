@@ -47,6 +47,8 @@ class SaleController:
         self.sale_form.tree.bind('<<TreeviewSelect>>', self._on_select_item)
         # Conectar doble clic para seleccionar
         self.sale_form.tree.bind('<Double-1>', self._on_double_click)
+        # Tecla Suprimir para eliminar el item seleccionado del carrito
+        self.sale_form.tree.bind('<Delete>', lambda e: self.delete_item())
         # Conectar evento de confirmación de venta
         self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
         # Conectar evento de artículo varios

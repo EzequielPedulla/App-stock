@@ -16,6 +16,8 @@ class ProductController:
         self.product_form.delete_button.configure(command=self.delete_product)
         self.product_list.tabla.bind(
             '<<TreeviewSelect>>', self.on_select_product)
+        self.product_list.tabla.bind(
+            '<Delete>', lambda e: self.delete_product())
 
         # Cargar productos
         self.load_products()

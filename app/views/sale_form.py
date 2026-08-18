@@ -205,6 +205,14 @@ class SaleForm(ttk.Frame):
 
         # Vincular la tecla Enter a la ventana principal
         self.bind_all('<Return>', self._on_enter_pressed)
+        # F10 para agregar un artículo Varios sin tocar el mouse
+        self.bind_all('<F10>', self._on_f10_pressed)
+
+    def _on_f10_pressed(self, event) -> None:
+        """Abre el diálogo de Varios con F10, solo si esta pestaña está
+        visible (F10 está en bind_all, que es global a toda la app)."""
+        if self.winfo_ismapped():
+            self._show_varios_dialog()
 
     def _save_current_items(self):
         """Guarda los items actuales del Treeview en el cache"""
