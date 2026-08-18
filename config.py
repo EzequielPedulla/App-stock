@@ -1,13 +1,21 @@
 import os
-from dotenv import load_dotenv
+from pathlib import Path
 
-# Cargar variables de entorno desde .env
-load_dotenv()
 
-MYSQL_CONFIG = {
-    'host': os.getenv('MYSQL_HOST', 'localhost'),
-    'port': int(os.getenv('MYSQL_PORT', '3306')),
-    'user': os.getenv('MYSQL_USER', 'root'),
-    'password': os.getenv('MYSQL_PASSWORD', ''),
-    'database': os.getenv('MYSQL_DATABASE', 'app_stock')
-}
+def _default_db_path() -> Path:
+    """Ubica la base de datos fuera de la carpeta del proyecto (que puede
+    estar sincronizada con OneDrive) para evitar bloqueos o corrupción
+    mientras la app escribe."""
+    override = os.getenv('APP_STOCK_DB_PATH')
+    if override:
+        path = Path(override)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    base = os.getenv('LOCALAPPDATA') or str(Path.home())
+    data_dir = Path(base) / 'App-Stock'
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir / 'app_stock.db'
+
+
+DB_PATH = _default_db_path()

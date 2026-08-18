@@ -1,6 +1,7 @@
-import pymysql
+import sqlite3
+from datetime import datetime
 from .product import Product
-from config import MYSQL_CONFIG
+from config import DB_PATH
 
 
 class Database:
@@ -16,15 +17,9 @@ class Database:
     def __init__(self):
         """Inicializa la conexión solo si no existe."""
         if Database._connection is None:
-            Database._connection = pymysql.connect(
-                host=MYSQL_CONFIG['host'],
-                port=MYSQL_CONFIG['port'],
-                user=MYSQL_CONFIG['user'],
-                password=MYSQL_CONFIG['password'],
-                database=MYSQL_CONFIG['database'],
-                cursorclass=pymysql.cursors.DictCursor,
-                autocommit=False  # Control manual de transacciones
-            )
+            Database._connection = sqlite3.connect(str(DB_PATH))
+            Database._connection.row_factory = sqlite3.Row
+            Database._connection.execute('PRAGMA foreign_keys = ON')
             self.connection = Database._connection
             self.cursor = self.connection.cursor()
             self.create_tables()
@@ -35,21 +30,21 @@ class Database:
     def create_tables(self):
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                barcode VARCHAR(20) UNIQUE,
-                name VARCHAR(255) NOT NULL,
-                price DECIMAL(10,2) NOT NULL,
-                stock INT DEFAULT 0
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                price REAL NOT NULL,
+                stock INTEGER DEFAULT 0
             )
         ''')
 
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS sales (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date DATETIME NOT NULL,
-                total DECIMAL(10,2) NOT NULL,
-                paid DECIMAL(10,2) NOT NULL,
-                `change` DECIMAL(10,2) NOT NULL,
+                total REAL NOT NULL,
+                paid REAL NOT NULL,
+                `change` REAL NOT NULL,
                 status VARCHAR(20) DEFAULT 'active',
                 cancelled_at DATETIME NULL,
                 cancellation_reason TEXT NULL
@@ -58,11 +53,11 @@ class Database:
 
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS sale_details (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                sale_id INT NOT NULL,
-                product_id INT NOT NULL,
-                quantity INT NOT NULL,
-                unit_price DECIMAL(10,2) NOT NULL,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sale_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                unit_price REAL NOT NULL,
                 FOREIGN KEY (sale_id) REFERENCES sales(id),
                 FOREIGN KEY (product_id) REFERENCES products(id)
             )
@@ -79,67 +74,70 @@ class Database:
             stock=int(data.get('stock', 0))
         )
 
-    def add_product(self, product):
+    def add_product(self, product, commit=True):
         self.cursor.execute('''
             INSERT INTO products (barcode, name, price, stock)
-            VALUES (%s, %s, %s, %s)
+            VALUES (?, ?, ?, ?)
         ''', (product.barcode, product.name, product.price, product.stock))
-        self.connection.commit()
+        if commit:
+            self.connection.commit()
 
     def get_all_products(self):
         self.cursor.execute('SELECT * FROM products')
         rows = self.cursor.fetchall()
-        return [Product.from_db_dict(row) for row in rows]
+        return [Product.from_db_dict(dict(row)) for row in rows]
 
-    def update_product(self, product):
+    def update_product(self, product, commit=True):
         self.cursor.execute('''
-            UPDATE products 
-            SET barcode=%s, name=%s, price=%s, stock=%s
-            WHERE id=%s
+            UPDATE products
+            SET barcode=?, name=?, price=?, stock=?
+            WHERE id=?
         ''', (product.barcode, product.name, product.price, product.stock, product.id))
-        self.connection.commit()
+        if commit:
+            self.connection.commit()
 
     def delete_product(self, product_id):
-        self.cursor.execute('DELETE FROM products WHERE id=%s', (product_id,))
+        self.cursor.execute('DELETE FROM products WHERE id=?', (product_id,))
         self.connection.commit()
 
     def get_product_by_id(self, product_id):
         self.cursor.execute(
-            'SELECT * FROM products WHERE id=%s', (product_id,))
+            'SELECT * FROM products WHERE id=?', (product_id,))
         row = self.cursor.fetchone()
-        return Product.from_db_dict(row) if row else None
+        return Product.from_db_dict(dict(row)) if row else None
 
     def get_product_by_barcode(self, barcode):
         self.cursor.execute(
-            'SELECT * FROM products WHERE barcode=%s', (barcode,))
+            'SELECT * FROM products WHERE barcode=?', (barcode,))
         row = self.cursor.fetchone()
-        return Product.from_db_dict(row) if row else None
+        return Product.from_db_dict(dict(row)) if row else None
 
-    def add_sale(self, date: str, total: float, paid: float, change: float) -> int:
+    def add_sale(self, date: str, total: float, paid: float, change: float, commit=True) -> int:
         self.cursor.execute(
-            '''INSERT INTO sales (date, total, paid, `change`) VALUES (%s, %s, %s, %s)''',
+            '''INSERT INTO sales (date, total, paid, `change`) VALUES (?, ?, ?, ?)''',
             (date, total, paid, change)
         )
-        self.connection.commit()
+        if commit:
+            self.connection.commit()
         return self.cursor.lastrowid
 
-    def add_sale_detail(self, sale_id: int, product_id: int, quantity: int, unit_price: float) -> None:
+    def add_sale_detail(self, sale_id: int, product_id: int, quantity: int, unit_price: float, commit=True) -> None:
         self.cursor.execute(
-            '''INSERT INTO sale_details (sale_id, product_id, quantity, unit_price) VALUES (%s, %s, %s, %s)''',
+            '''INSERT INTO sale_details (sale_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)''',
             (sale_id, product_id, quantity, unit_price)
         )
-        self.connection.commit()
+        if commit:
+            self.connection.commit()
 
     def execute_query(self, query, params=None):
         """Ejecuta una consulta SELECT y retorna los resultados como lista de diccionarios"""
         try:
-            # Crear un nuevo cursor para asegurar datos frescos
             cursor = self.connection.cursor()
             if params:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
-            result = cursor.fetchall()
+            result = [dict(row) for row in cursor.fetchall()]
             cursor.close()
             return result
         except Exception as e:
@@ -158,10 +156,8 @@ class Database:
             bool: True si se anuló correctamente, False en caso contrario
         """
         try:
-            from datetime import datetime
-
             # Verificar que la venta existe y está activa
-            query = "SELECT status FROM sales WHERE id = %s"
+            query = "SELECT status FROM sales WHERE id = ?"
             result = self.execute_query(query, (sale_id,))
 
             if not result:
@@ -174,27 +170,27 @@ class Database:
 
             # Obtener detalles de la venta para reintegrar stock
             query = """
-                SELECT product_id, quantity 
-                FROM sale_details 
-                WHERE sale_id = %s
+                SELECT product_id, quantity
+                FROM sale_details
+                WHERE sale_id = ?
             """
             details = self.execute_query(query, (sale_id,))
 
-            # Reintegrar stock de cada producto (excepto VARIOS)
+            # Reintegrar stock de cada producto (excepto VARIOS), en la misma transacción
             for detail in details:
                 product = self.get_product_by_id(detail['product_id'])
                 if product and not product.barcode.startswith('VAR'):
                     product.stock += detail['quantity']
-                    self.update_product(product)
+                    self.update_product(product, commit=False)
 
             # Marcar venta como anulada
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             update_query = """
-                UPDATE sales 
+                UPDATE sales
                 SET status = 'cancelled',
-                    cancelled_at = %s,
-                    cancellation_reason = %s
-                WHERE id = %s
+                    cancelled_at = ?,
+                    cancellation_reason = ?
+                WHERE id = ?
             """
             self.cursor.execute(update_query, (now, reason, sale_id))
             self.connection.commit()
