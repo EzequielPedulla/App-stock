@@ -35,7 +35,12 @@ class SaleController:
         self.items = []
         self.temp_stock = {}
         self._varios_counter = 0
+        # Hasta 3 ventas en curso a la vez (ej. dos clientes en el
+        # mostrador): cada una guarda su propio carrito por separado.
+        self.active_slot = 0
+        self.slots = [{'items': [], 'temp_stock': {}} for _ in range(3)]
         self._connect_events()
+        self._refresh_slot_buttons()
 
     def _connect_events(self):
         self.sale_form.add_button.configure(command=self.add_item)
@@ -56,6 +61,12 @@ class SaleController:
         # Conectar evento de registro rápido de producto no encontrado
         self.sale_form.bind(
             "<<RegisterProduct>>", lambda e: self.register_product())
+        # Conectar pestañas y atajos (Ctrl+1/2/3) para cambiar de venta
+        for i, btn in enumerate(self.sale_form.slot_buttons):
+            btn.configure(command=lambda idx=i: self.switch_slot(idx))
+        for i in range(3):
+            self.sale_form.bind(
+                f"<<SwitchSlot{i}>>", lambda e, idx=i: self.switch_slot(idx))
 
     def _on_select_item(self, event) -> None:
         """Maneja el evento cuando se selecciona un item en la tabla.
@@ -400,8 +411,39 @@ class SaleController:
         # Actualizar el estado de los botones
         self.sale_form.set_action_buttons_state("disabled")
 
+        # Actualizar las pestañas de venta (cantidad de items por venta)
+        self._refresh_slot_buttons()
+
         # Forzar la actualización de la interfaz
         self.sale_form.update_idletasks()
+
+    def _refresh_slot_buttons(self) -> None:
+        """Actualiza el texto/resaltado de las pestañas Venta 1/2/3."""
+        counts = []
+        for i in range(len(self.slots)):
+            if i == self.active_slot:
+                counts.append(len(self.items))
+            else:
+                counts.append(len(self.slots[i]['items']))
+        self.sale_form.set_slot_buttons(self.active_slot, counts)
+
+    def switch_slot(self, index: int) -> None:
+        """Cambia a otra de las ventas en curso, sin perder la actual."""
+        if index == self.active_slot:
+            return
+
+        # Guardar el estado de la venta que se está dejando
+        self.slots[self.active_slot]['items'] = self.items
+        self.slots[self.active_slot]['temp_stock'] = self.temp_stock
+
+        self.active_slot = index
+        self.items = self.slots[index]['items']
+        self.temp_stock = self.slots[index]['temp_stock']
+
+        # Evitar que quede un filtro de búsqueda de la venta anterior
+        self.sale_form._clear_search()
+        self._clear_form()
+        self._update_table()
 
     def _clear_form(self):
         # Limpiar campos

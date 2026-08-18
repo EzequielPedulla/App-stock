@@ -18,7 +18,18 @@ class SaleForm(ttk.Frame):
         # Título grande
         title_label = ttk.Label(self, text="Ventas",
                                 font=("Segoe UI", 24, "bold"))
-        title_label.pack(anchor=tk.W, pady=(0, 20))
+        title_label.pack(anchor=tk.W, pady=(0, 10))
+
+        # Pestañas de venta: para poder cobrarle a varias personas a la vez
+        # sin perder lo que ya se cargó en cada una.
+        slots_frame = ttk.Frame(self)
+        slots_frame.pack(anchor=tk.W, pady=(0, 15))
+
+        self.slot_buttons = []
+        for i in range(3):
+            btn = ttk.Button(slots_frame, text=f"Venta {i + 1}", width=14)
+            btn.pack(side=tk.LEFT, padx=(0, 5))
+            self.slot_buttons.append(btn)
 
         # Card para el formulario
         card = ttk.Frame(self, style="Card.TFrame", padding=20)
@@ -207,12 +218,22 @@ class SaleForm(ttk.Frame):
         self.bind_all('<Return>', self._on_enter_pressed)
         # F10 para agregar un artículo Varios sin tocar el mouse
         self.bind_all('<F10>', self._on_f10_pressed)
+        # Ctrl+1/2/3 para cambiar entre las ventas en curso
+        for i in range(3):
+            self.bind_all(f'<Control-Key-{i + 1}>',
+                          lambda e, idx=i: self._on_switch_slot_shortcut(idx))
 
     def _on_f10_pressed(self, event) -> None:
         """Abre el diálogo de Varios con F10, solo si esta pestaña está
         visible (F10 está en bind_all, que es global a toda la app)."""
         if self.winfo_ismapped():
             self._show_varios_dialog()
+
+    def _on_switch_slot_shortcut(self, index: int) -> None:
+        """Genera el evento de cambio de venta con Ctrl+1/2/3, solo si esta
+        pestaña está visible (bind_all es global a toda la app)."""
+        if self.winfo_ismapped():
+            self.event_generate(f"<<SwitchSlot{index}>>")
 
     def _save_current_items(self):
         """Guarda los items actuales del Treeview en el cache"""
@@ -441,6 +462,22 @@ class SaleForm(ttk.Frame):
         self.barcode_entry.delete(0, 'end')
         self.qty_entry.delete(0, 'end')
         self.barcode_entry.focus()
+
+    def set_slot_buttons(self, active_index: int, counts: list) -> None:
+        """Actualiza el texto y resaltado de las pestañas de venta.
+
+        Args:
+            active_index: índice de la venta actualmente mostrada.
+            counts: cantidad de items cargados en cada venta.
+        """
+        for i, btn in enumerate(self.slot_buttons):
+            label = f"Venta {i + 1}"
+            if counts[i] > 0:
+                label += f" ({counts[i]})"
+            btn.configure(
+                text=label,
+                bootstyle="primary" if i == active_index else "secondary"
+            )
 
     def set_action_buttons_state(self, state: str) -> None:
         """Configura el estado de los botones de acción."""
