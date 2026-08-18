@@ -64,16 +64,6 @@ class Database:
         ''')
         self.connection.commit()
 
-    @staticmethod
-    def from_db_dict(data):
-        return Product(
-            id=data.get('id'),
-            barcode=data.get('barcode'),
-            name=data.get('name'),
-            price=float(data.get('price')),
-            stock=int(data.get('stock', 0))
-        )
-
     def add_product(self, product, commit=True):
         self.cursor.execute('''
             INSERT INTO products (barcode, name, price, stock)
