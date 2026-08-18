@@ -425,9 +425,11 @@ class SaleController:
             total = sum(float(item['subtotal']) for item in self.items)
             date = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
 
-            # Registrar la venta en la base de datos
+            # Registrar la venta y todos sus movimientos en una única transacción:
+            # si algo falla a mitad de camino, se revierte todo (rollback) en vez
+            # de dejar una venta a medio registrar.
             sale_id = self.db.add_sale(
-                date=date, total=total, paid=paid, change=change)
+                date=date, total=total, paid=paid, change=change, commit=False)
 
             # Registrar los detalles de la venta
             for item in self.items:
@@ -453,9 +455,10 @@ class SaleController:
                         price=float(item['price']),
                         stock=0  # Sin stock porque no se controla
                     )
-                    self.db.add_product(varios_product)
+                    self.db.add_product(varios_product, commit=False)
 
-                    # Obtener el producto recién creado
+                    # Obtener el producto recién creado (visible en la misma
+                    # transacción aunque todavía no se hizo commit)
                     varios_product = self.db.get_product_by_barcode(
                         varios_barcode)
 
@@ -464,7 +467,8 @@ class SaleController:
                         sale_id=sale_id,
                         product_id=varios_product.id,
                         quantity=int(item['qty']),
-                        unit_price=float(item['price'])
+                        unit_price=float(item['price']),
+                        commit=False
                     )
                 else:
                     # Producto normal
@@ -474,7 +478,8 @@ class SaleController:
                             sale_id=sale_id,
                             product_id=product.id,
                             quantity=int(item['qty']),
-                            unit_price=float(item['price'])
+                            unit_price=float(item['price']),
+                            commit=False
                         )
 
             # Actualizar el stock en la base de datos (solo productos normales)
@@ -482,7 +487,10 @@ class SaleController:
                 product = self.db.get_product_by_barcode(barcode)
                 if product:
                     product.stock -= qty
-                    self.db.update_product(product)
+                    self.db.update_product(product, commit=False)
+
+            # Recién acá, con todo registrado sin errores, se confirma de una
+            self.db.connection.commit()
 
             # Limpiar la venta
             self.items = []
@@ -509,6 +517,7 @@ class SaleController:
 
             return True
         except Exception as e:
+            self.db.connection.rollback()
             messagebox.showerror(
                 "Error", f"Error al confirmar la venta: {str(e)}")
             return False
