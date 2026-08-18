@@ -50,9 +50,10 @@ class TestCancelSale:
         # Mock de update_product
         mock_update = mocker.patch.object(db, 'update_product')
 
-        # Mock de cursor.execute y commit
-        mocker.patch.object(db.cursor, 'execute')
-        mocker.patch.object(db.connection, 'commit')
+        # Mock de cursor y commit (se reemplaza el atributo completo: un
+        # sqlite3.Cursor real no permite parchear métodos individuales)
+        mocker.patch.object(db, 'cursor')
+        mocker.patch.object(db, 'connection')
 
         # Ejecutar
         result = db.cancel_sale(1, "Producto defectuoso")
@@ -137,9 +138,10 @@ class TestCancelSale:
         # Mock de update_product
         mock_update = mocker.patch.object(db, 'update_product')
 
-        # Mock de cursor y commit
-        mocker.patch.object(db.cursor, 'execute')
-        mocker.patch.object(db.connection, 'commit')
+        # Mock de cursor y commit (se reemplaza el atributo completo: un
+        # sqlite3.Cursor real no permite parchear métodos individuales)
+        mocker.patch.object(db, 'cursor')
+        mocker.patch.object(db, 'connection')
 
         # Ejecutar
         result = db.cancel_sale(1, "Test")
@@ -186,9 +188,10 @@ class TestCancelSale:
         # Mock de update_product
         mock_update = mocker.patch.object(db, 'update_product')
 
-        # Mock de cursor y commit
-        mocker.patch.object(db.cursor, 'execute')
-        mocker.patch.object(db.connection, 'commit')
+        # Mock de cursor y commit (se reemplaza el atributo completo: un
+        # sqlite3.Cursor real no permite parchear métodos individuales)
+        mocker.patch.object(db, 'cursor')
+        mocker.patch.object(db, 'connection')
 
         # Ejecutar
         result = db.cancel_sale(1, "Test")
@@ -216,9 +219,10 @@ class TestCancelSale:
         mocker.patch.object(db, 'execute_query',
                             side_effect=mock_query_results)
 
-        # Mock de cursor y commit
-        mock_execute = mocker.patch.object(db.cursor, 'execute')
-        mocker.patch.object(db.connection, 'commit')
+        # Mock de cursor y commit (se reemplaza el atributo completo: un
+        # sqlite3.Cursor real no permite parchear métodos individuales)
+        mock_cursor = mocker.patch.object(db, 'cursor')
+        mocker.patch.object(db, 'connection')
 
         # Ejecutar
         reason = "Cliente insatisfecho con el producto"
@@ -226,7 +230,7 @@ class TestCancelSale:
 
         # Verificar que se llamó a execute con el motivo
         assert result is True
-        assert mock_execute.called
+        assert mock_cursor.execute.called
         # Verificar que el motivo está en alguno de los argumentos
-        calls = str(mock_execute.call_args_list)
+        calls = str(mock_cursor.execute.call_args_list)
         assert reason in calls
