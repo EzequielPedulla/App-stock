@@ -36,7 +36,7 @@ class Database:
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                barcode VARCHAR(13) UNIQUE,
+                barcode VARCHAR(20) UNIQUE,
                 name VARCHAR(255) NOT NULL,
                 price DECIMAL(10,2) NOT NULL,
                 stock INT DEFAULT 0
