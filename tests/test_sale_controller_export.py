@@ -252,14 +252,16 @@ class TestSaleControllerExport:
         assert "Error al generar ticket" in mock_messagebox.showerror.call_args[0][0]
 
     @patch('app.controllers.sale_controller.messagebox')
-    def test_confirm_sale_with_ticket_prompt(
+    def test_confirm_sale_does_not_prompt_for_ticket(
         self,
         mock_messagebox: MagicMock,
         sale_controller: SaleController,
         mocker: "MockerFixture"
     ) -> None:
         """
-        Test que verifica que se pregunta por el ticket después de confirmar venta.
+        Confirmar una venta no debe preguntar por el ticket ni generarlo
+        automáticamente (no hay impresora configurada todavía); queda
+        disponible para generarlo a mano desde Reportes.
 
         Args:
             mock_messagebox: Mock de messagebox
@@ -290,10 +292,6 @@ class TestSaleControllerExport:
         sale_controller.db.add_sale_detail = MagicMock()
         sale_controller.db.update_product = MagicMock()
 
-        # Mock para que NO genere el ticket
-        mock_messagebox.askyesno.return_value = False
-        mock_messagebox.showinfo = MagicMock()
-
         # Mock del método _generate_sale_ticket
         mock_generate = mocker.patch.object(
             sale_controller, '_generate_sale_ticket')
@@ -303,12 +301,11 @@ class TestSaleControllerExport:
 
         # Verificar
         assert result is True
-        # Verificar que se preguntó por el ticket
-        assert any(
+        # No debe preguntar nada sobre el ticket
+        assert not any(
             'ticket' in str(call).lower()
             for call in mock_messagebox.askyesno.call_args_list
         )
-        # Como respondió No, no se debe generar el ticket
         mock_generate.assert_not_called()
 
 

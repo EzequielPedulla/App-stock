@@ -552,19 +552,13 @@ class SaleController:
             # Actualizar la lista de productos
             self._update_product_list()
 
-            messagebox.showinfo(
-                "Éxito", f"Venta realizada correctamente.\nVuelto entregado: ${change:.2f}")
-
             # Actualizar reportes si existe el controller
             if self.report_controller:
                 self.report_controller.refresh()
 
-            # Preguntar si desea generar el ticket
-            if messagebox.askyesno(
-                "Ticket de Venta",
-                "¿Desea generar el ticket de venta en PDF?"
-            ):
-                self._generate_sale_ticket(sale_id, date, total, paid, change)
+            # No se pregunta por el ticket automáticamente (todavía no hay
+            # impresora). El ticket de una venta se puede seguir generando
+            # a mano desde Reportes cuando haga falta.
 
             return True
         except Exception as e:
