@@ -61,6 +61,13 @@ class ProductForm(ttk.Frame):
         self.cancel_button.pack(side='left', padx=5)
         self.cancel_button.pack_forget()  # Inicialmente oculto
 
+        # Enter en cualquier campo guarda, igual que tocar "Guardar".
+        # Atado a cada Entry (no bind_all) para no pisar el atajo de
+        # Enter que ya tiene la pantalla de Ventas.
+        for entry in (self.barcode_entry, self.name_entry,
+                      self.price_entry, self.stock_entry):
+            entry.bind('<Return>', lambda e: self.save_button.invoke())
+
     def get_product_data(self):
         return {
             'barcode': self.barcode_entry.get(),
