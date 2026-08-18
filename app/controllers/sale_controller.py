@@ -408,6 +408,12 @@ class SaleController:
         total = sum(float(item['subtotal']) for item in self.items)
         self.sale_form.total_label.config(text=f"Total: ${total:.2f}")
 
+        # Actualizar el contador de productos (suma de cantidades, no de
+        # líneas: 2 Coca-Colas + 3 panes son "5 productos")
+        unit_count = sum(int(item['qty']) for item in self.items)
+        label = "1 producto" if unit_count == 1 else f"{unit_count} productos"
+        self.sale_form.count_label.config(text=label)
+
         # Actualizar el estado de los botones
         self.sale_form.set_action_buttons_state("disabled")
 

@@ -190,6 +190,15 @@ class SaleForm(ttk.Frame):
         bottom_frame = ttk.Frame(self)
         bottom_frame.pack(fill=tk.X, pady=(10, 0))
 
+        # Contador de productos cargados en esta venta
+        self.count_label = ttk.Label(
+            bottom_frame,
+            text="0 productos",
+            font=("Segoe UI", 12),
+            foreground="gray"
+        )
+        self.count_label.pack(side=tk.LEFT)
+
         # Frame para el total
         total_frame = ttk.Frame(bottom_frame)
         total_frame.pack(side=tk.RIGHT, padx=(0, 15))
