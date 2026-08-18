@@ -5,26 +5,16 @@
 BIENVENIDO AL SISTEMA DE GESTION DE INVENTARIO Y VENTAS
 
 ========================================
-    INSTALACION RAPIDA (3 PASOS)
+    INSTALACION
 ========================================
 
-PASO 1: INSTALAR XAMPP
-----------------------
-1. Descargue XAMPP desde: https://www.apachefriends.org/
-2. Instale XAMPP (solo MySQL y Apache)
-3. NO inicie XAMPP al finalizar
+1. Ejecute el instalador (App-Stock-Installer-v1.0.exe) como administrador
+2. Siga los pasos del asistente
+3. ¡Listo! Ya puede usar el sistema
 
-PASO 2: CONFIGURAR BASE DE DATOS
--------------------------------
-1. Inicie XAMPP Control Panel
-2. Haga clic en "Start" junto a MySQL
-3. Ejecute el archivo "configurar.bat"
-4. Siga las instrucciones en pantalla
-
-PASO 3: EJECUTAR APLICACION
----------------------------
-1. Haga doble clic en "App-Stock.exe"
-2. ¡Listo! Ya puede usar el sistema
+No hace falta instalar ni configurar ninguna base de datos: App-Stock
+guarda todo en un archivo local (SQLite) que crea automáticamente la
+primera vez que se abre.
 
 ========================================
     FUNCIONALIDADES INCLUIDAS
@@ -58,23 +48,25 @@ PASO 3: EJECUTAR APLICACION
 - Windows 10 o superior
 - 4 GB RAM minimo
 - 500 MB espacio en disco
-- Conexion a internet (solo para descargar XAMPP)
+- No requiere conexion a internet para funcionar
+
+========================================
+    DONDE QUEDAN LOS DATOS
+========================================
+
+La base de datos (productos, ventas) se guarda en:
+%LOCALAPPDATA%\App-Stock\app_stock.db
+
+Para hacer un backup, alcanza con copiar ese archivo a otro lugar
+(por ejemplo un pendrive) con la app cerrada.
 
 ========================================
     SOPORTE TECNICO
 ========================================
 
-Si tiene problemas:
-
-1. Verifique que MySQL este ejecutandose en XAMPP
-2. Ejecute "configurar.bat" nuevamente
-3. Reinicie la aplicacion
-
-Para soporte tecnico:
-- Email: soporte@app-stock.com
-- Telefono: +54 9 11 1234-5678
+Si tiene problemas, reinicie la aplicación. Si persisten, contacte
+a quien le instaló el sistema.
 
 ========================================
     VERSION: 1.0
-    FECHA: Septiembre 2024
 ========================================
