@@ -57,9 +57,9 @@ class SaleForm(ttk.Frame):
                               font=("Segoe UI", 11))
         qty_label.grid(row=1, column=1, sticky=tk.W, pady=(0, 5))
 
-        self.qty_entry = ttk.Entry(card, font=("Segoe UI", 12))
+        self.qty_entry = ttk.Entry(card, font=("Segoe UI", 12), width=8)
         self.qty_entry.bind("<Escape>", self._on_escape_pressed)
-        self.qty_entry.grid(row=2, column=1, sticky=tk.EW,
+        self.qty_entry.grid(row=2, column=1, sticky=tk.W,
                             pady=(0, 10), padx=(0, 10))
 
         # Botones de acción
@@ -88,7 +88,7 @@ class SaleForm(ttk.Frame):
         self.delete_button.configure(state="disabled")
 
         card.columnconfigure(0, weight=1)
-        card.columnconfigure(1, weight=1)
+        card.columnconfigure(1, weight=0)
 
         # Productos seleccionados
         prod_sel_label = ttk.Label(

@@ -57,8 +57,13 @@ class CajaForm(ttk.Frame):
 
         self._resumen_label("Gastos en efectivo:", 1, 2, resumen_card, "label_total_gastos_efectivo")
         self._resumen_label("Total Retiros:", 2, 0, resumen_card, "label_total_retiros")
-        self._resumen_label("Gastos por transferencia (no afecta la caja):", 2, 2, resumen_card, "label_total_gastos_transferencia")
-        self._resumen_label("Pagos de bolsillo (no afecta la caja):", 3, 0, resumen_card, "label_total_bolsillo")
+        self._resumen_label("Gastos por transferencia:", 2, 2, resumen_card, "label_total_gastos_transferencia")
+        self._resumen_label("Bolsillo del dueño:", 3, 0, resumen_card, "label_total_bolsillo")
+
+        ttk.Label(
+            resumen_card, text="Transferencia y bolsillo no afectan el efectivo de la caja",
+            font=("Segoe UI", 9), foreground="gray"
+        ).grid(row=4, column=0, columnspan=4, sticky=W, pady=(8, 0))
 
         # ===== Banner de efectivo esperado (color según el signo) =====
         efectivo_card = ttk.Frame(self, bootstyle="light", padding=20)

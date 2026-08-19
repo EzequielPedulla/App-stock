@@ -31,13 +31,13 @@ class ProductForm(ttk.Frame):
 
         ttk.Label(self, text="Precio",
                   font=("Segoe UI", 11)).grid(row=3, column=0, pady=10, sticky='w')
-        self.price_entry = ttk.Entry(self)
-        self.price_entry.grid(row=3, column=1, padx=(20, 0), sticky='ew')
+        self.price_entry = ttk.Entry(self, width=15)
+        self.price_entry.grid(row=3, column=1, padx=(20, 0), sticky='w')
 
         ttk.Label(self, text="Stock",
                   font=("Segoe UI", 11)).grid(row=4, column=0, pady=10, sticky='w')
-        self.stock_entry = ttk.Entry(self)
-        self.stock_entry.grid(row=4, column=1, padx=(20, 0), sticky='ew')
+        self.stock_entry = ttk.Entry(self, width=15)
+        self.stock_entry.grid(row=4, column=1, padx=(20, 0), sticky='w')
 
         # Frame para los botones
         frame_botones = ttk.Frame(self)
