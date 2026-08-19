@@ -1,7 +1,7 @@
 """Controlador para el módulo de caja (cierre de caja diario)."""
 
 from typing import Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from tkinter import messagebox
 
 from ..models.database import Database
@@ -15,6 +15,7 @@ class CajaController:
         self.caja_form.caja_controller = self
         self.db = Database()
         self.sesion = None
+        self.fecha_actual = self._hoy()
         self._connect_events()
         self.refresh()
 
@@ -26,16 +27,43 @@ class CajaController:
         self.caja_form.cerrar_button.configure(command=self.abrir_cierre)
         self.caja_form.tree.bind(
             '<Delete>', lambda e: self.eliminar_movimiento())
+        self.caja_form.dia_anterior_button.configure(
+            command=self.ir_dia_anterior)
+        self.caja_form.dia_siguiente_button.configure(
+            command=self.ir_dia_siguiente)
+        self.caja_form.volver_hoy_button.configure(
+            command=self.volver_a_hoy)
 
     def _hoy(self) -> str:
         return datetime.now().strftime('%Y-%m-%d')
 
+    def ir_dia_anterior(self) -> None:
+        fecha = datetime.strptime(self.fecha_actual, '%Y-%m-%d')
+        self.fecha_actual = (fecha - timedelta(days=1)).strftime('%Y-%m-%d')
+        self.refresh()
+
+    def ir_dia_siguiente(self) -> None:
+        if self.fecha_actual >= self._hoy():
+            return
+        fecha = datetime.strptime(self.fecha_actual, '%Y-%m-%d')
+        self.fecha_actual = (fecha + timedelta(days=1)).strftime('%Y-%m-%d')
+        self.refresh()
+
+    def volver_a_hoy(self) -> None:
+        self.fecha_actual = self._hoy()
+        self.refresh()
+
     def refresh(self) -> None:
-        """Carga (o crea) la sesión de caja de hoy y actualiza la pantalla."""
-        fecha = self._hoy()
+        """Carga (o crea) la sesión de caja del día que se está viendo y
+        actualiza la pantalla. Solo el día de hoy se crea/edita: los días
+        anteriores se muestran en modo solo lectura con lo que haya
+        quedado guardado (si ese día nunca se abrió la caja, se ve vacío,
+        pero igual con las ventas reales de ese día)."""
+        fecha = self.fecha_actual
+        es_hoy = (fecha == self._hoy())
         sesion = self.db.get_caja_sesion_by_fecha(fecha)
 
-        if sesion is None:
+        if sesion is None and es_hoy:
             # Nueva sesión: el fondo inicial arranca con lo que se contó al
             # cerrar el día anterior (si hay), si no en $0.
             anterior = self.db.get_last_caja_sesion()
@@ -94,24 +122,48 @@ class CajaController:
         return total_vendido - total_egresos
 
     def _actualizar_pantalla(self) -> None:
+        fecha = self.fecha_actual
+        es_hoy = (fecha == self._hoy())
         sesion = self.sesion
-        movimientos = self.db.get_caja_movimientos(sesion['id'])
-        ventas = self.db.get_ventas_totales_por_metodo(sesion['fecha'])
+
+        # Un día pasado en el que nunca se abrió la caja no tiene sesión
+        # guardada: se arma una "vacía" solo para mostrar en pantalla (no
+        # se guarda nada), pero las ventas de ese día sí son reales.
+        if sesion is not None:
+            movimientos = self.db.get_caja_movimientos(sesion['id'])
+            fondo_inicial = float(sesion['fondo_inicial'])
+            cerrada = bool(sesion['cerrada'])
+            efectivo_contado = (
+                float(sesion['efectivo_contado'])
+                if sesion['efectivo_contado'] is not None else 0.0)
+        else:
+            movimientos = []
+            fondo_inicial = 0.0
+            cerrada = False
+            efectivo_contado = 0.0
+
+        ventas = self.db.get_ventas_totales_por_metodo(fecha)
         totales = self._totales_movimientos(movimientos)
 
-        fondo_inicial = float(sesion['fondo_inicial'])
         efectivo_esperado = self._calcular_efectivo_esperado(
-            sesion, movimientos, ventas)
+            {'fondo_inicial': fondo_inicial}, movimientos, ventas)
         resultado_dia = self._calcular_resultado_dia(movimientos, ventas)
+        total_ventas_dia = (
+            ventas['efectivo'] + ventas['transferencia'] + ventas['posnet'])
+        total_gastos_dia = (
+            totales['gastos_efectivo'] + totales['gastos_transferencia']
+            + totales['total_retiros'])
 
-        cerrada = bool(sesion['cerrada'])
-        efectivo_contado = (
-            float(sesion['efectivo_contado'])
-            if sesion['efectivo_contado'] is not None else 0.0)
+        # Solo se puede editar/agregar movimientos en el día de hoy: los
+        # días anteriores quedan como consulta, no se retocan.
+        bloqueada = cerrada or not es_hoy
 
+        self.caja_form.update_fecha(fecha, es_hoy)
         self.caja_form.load_movimientos(movimientos)
         self.caja_form.update_summary({
             'resultado_dia': resultado_dia,
+            'total_ventas_dia': total_ventas_dia,
+            'total_gastos_dia': total_gastos_dia,
             'fondo_inicial': fondo_inicial,
             'ventas_efectivo': ventas['efectivo'],
             'ventas_transferencia': ventas['transferencia'],
@@ -124,11 +176,21 @@ class CajaController:
             'total_ingresos': totales['total_ingresos'],
             'efectivo_esperado': efectivo_esperado,
             'cerrada': cerrada,
+            'bloqueada': bloqueada,
+            'es_hoy': es_hoy,
+            'sin_datos': sesion is None,
             'efectivo_contado': efectivo_contado,
             'diferencia': efectivo_contado - efectivo_esperado,
         })
 
+    def _puede_editar(self) -> bool:
+        if self.fecha_actual != self._hoy() or self.sesion is None:
+            return False
+        return not bool(self.sesion['cerrada'])
+
     def guardar_fondo_inicial(self) -> None:
+        if not self._puede_editar():
+            return
         try:
             monto = float(self.caja_form.fondo_inicial_entry.get())
         except ValueError:
@@ -139,6 +201,8 @@ class CajaController:
         self.refresh()
 
     def agregar_movimiento(self) -> None:
+        if not self._puede_editar():
+            return
         data = self.caja_form.get_movimiento_data()
 
         descripcion = data['descripcion']
@@ -170,6 +234,8 @@ class CajaController:
         self.refresh()
 
     def eliminar_movimiento(self) -> None:
+        if not self._puede_editar():
+            return
         selected = self.caja_form.tree.selection()
         if not selected:
             return
@@ -180,6 +246,8 @@ class CajaController:
         self.refresh()
 
     def abrir_cierre(self) -> None:
+        if not self._puede_editar():
+            return
         self.caja_form.show_cerrar_dialog(self._efectivo_esperado_actual())
 
     def _efectivo_esperado_actual(self) -> float:

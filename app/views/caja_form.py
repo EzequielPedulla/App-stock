@@ -18,28 +18,82 @@ class CajaForm(ttk.Frame):
             self, text="Caja", font=("Segoe UI", 24, "bold")
         ).pack(anchor=W, pady=(0, 15))
 
+        # ===== Navegación entre días: por defecto se ve hoy, pero se
+        # puede ir para atrás a revisar días anteriores (sin poder
+        # editarlos) y volver a hoy con un solo botón. =====
+        nav_row = ttk.Frame(self)
+        nav_row.pack(fill=X, pady=(0, 10))
+        self.dia_anterior_button = ttk.Button(
+            nav_row, text="◀ Día anterior", bootstyle="secondary", width=14)
+        self.dia_anterior_button.pack(side=LEFT)
+        self.fecha_label = ttk.Label(
+            nav_row, text="Hoy", font=("Segoe UI", 13, "bold"))
+        self.fecha_label.pack(side=LEFT, padx=15)
+        self.dia_siguiente_button = ttk.Button(
+            nav_row, text="Día siguiente ▶", bootstyle="secondary", width=14)
+        self.dia_siguiente_button.pack(side=LEFT)
+        self.volver_hoy_button = ttk.Button(
+            nav_row, text="Volver a hoy", bootstyle="info", width=12)
+        # Se muestra/oculta según el día que se esté viendo (ver update_fecha).
+
         self.estado_label = ttk.Label(
             self, text="", font=("Segoe UI", 11, "bold"), foreground="#c0392b")
         self.estado_label.pack(anchor=W, pady=(0, 10))
 
         # ===== Resultado del día: el número más importante de la
-        # pantalla, arriba de todo, bien grande. Es la respuesta directa
-        # a "¿cuánto gané hoy?": todo lo vendido menos lo que salió. =====
+        # pantalla, arriba de todo, bien grande. Se muestra como una
+        # cuenta simple: total vendido menos total gastado = resultado,
+        # para que se entienda de un vistazo de dónde sale ese número. =====
         resultado_card = ttk.Frame(self, bootstyle="light", padding=20)
         resultado_card.pack(fill=X, pady=(0, 15))
 
+        cuenta_row = ttk.Frame(resultado_card)
+        cuenta_row.pack(fill=X)
+
+        ventas_col = ttk.Frame(cuenta_row)
+        ventas_col.pack(side=LEFT)
         ttk.Label(
-            resultado_card, text="Resultado de hoy",
-            font=("Segoe UI", 14)
+            ventas_col, text="Total Ventas", font=("Segoe UI", 13)
+        ).pack(anchor=W)
+        self.label_total_ventas_dia = ttk.Label(
+            ventas_col, text="$0.00", font=("Segoe UI", 22, "bold"),
+            bootstyle="success")
+        self.label_total_ventas_dia.pack(anchor=W)
+
+        ttk.Label(
+            cuenta_row, text="−", font=("Segoe UI", 22)
+        ).pack(side=LEFT, padx=15, pady=(20, 0))
+
+        gastos_col = ttk.Frame(cuenta_row)
+        gastos_col.pack(side=LEFT)
+        ttk.Label(
+            gastos_col, text="Total Gastos", font=("Segoe UI", 13)
+        ).pack(anchor=W)
+        self.label_total_gastos_dia = ttk.Label(
+            gastos_col, text="$0.00", font=("Segoe UI", 22, "bold"),
+            bootstyle="danger")
+        self.label_total_gastos_dia.pack(anchor=W)
+
+        ttk.Label(
+            cuenta_row, text="=", font=("Segoe UI", 22)
+        ).pack(side=LEFT, padx=15, pady=(20, 0))
+
+        resultado_col = ttk.Frame(cuenta_row)
+        resultado_col.pack(side=LEFT)
+        ttk.Label(
+            resultado_col, text="Resultado de hoy", font=("Segoe UI", 13)
         ).pack(anchor=W)
         self.label_resultado_dia = ttk.Label(
-            resultado_card, text="$0.00", font=("Segoe UI", 32, "bold"),
+            resultado_col, text="$0.00", font=("Segoe UI", 32, "bold"),
             bootstyle="success")
-        self.label_resultado_dia.pack(anchor=W, pady=(5, 5))
+        self.label_resultado_dia.pack(anchor=W)
+
         ttk.Label(
-            resultado_card, text="Total vendido menos gastos y retiros del día",
-            font=("Segoe UI", 10), foreground="gray"
-        ).pack(anchor=W)
+            resultado_card,
+            text="Gastos incluye retiros. No cuenta lo fiado (todavía no se cobró) "
+                 "ni el bolsillo del dueño (no es plata del negocio).",
+            font=("Segoe UI", 9), foreground="gray"
+        ).pack(anchor=W, pady=(10, 0))
 
         # ===== Fila de tarjetas: ventas del día por método =====
         ventas_row = ttk.Frame(self)
@@ -115,7 +169,7 @@ class CajaForm(ttk.Frame):
         tipo_row.pack(fill=X, pady=(0, 10))
         self.tipo_buttons = {}
         for tipo, label in (
-            ('gasto', 'Gasto (proveedor)'),
+            ('gasto', 'Gastos'),
             ('retiro', 'Retiro'),
             ('bolsillo', 'Bolsillo del dueño'),
             ('ingreso', 'Ingreso a la caja'),
@@ -168,9 +222,9 @@ class CajaForm(ttk.Frame):
         form_row.columnconfigure(0, weight=1)
 
         # ===== Tabla de movimientos del día =====
-        ttk.Label(
-            self, text="Movimientos de hoy", font=("Segoe UI", 14, "bold")
-        ).pack(anchor=W, pady=(0, 10))
+        self.movimientos_title_label = ttk.Label(
+            self, text="Movimientos de hoy", font=("Segoe UI", 14, "bold"))
+        self.movimientos_title_label.pack(anchor=W, pady=(0, 10))
 
         table_frame = ttk.Frame(self, bootstyle="light", padding=10)
         table_frame.pack(fill=BOTH, expand=True)
@@ -277,10 +331,28 @@ class CajaForm(ttk.Frame):
                 f"${float(mov['monto']):.2f}"
             ), tags=('evenrow' if i % 2 == 0 else 'oddrow',))
 
+    def update_fecha(self, fecha: str, es_hoy: bool) -> None:
+        """Actualiza la barra de navegación de días y el título de la
+        tabla de movimientos según el día que se está viendo."""
+        anio, mes, dia = fecha.split('-')
+        texto_fecha = f"Hoy ({dia}/{mes})" if es_hoy else f"{dia}/{mes}/{anio}"
+        self.fecha_label.configure(text=texto_fecha)
+        self.movimientos_title_label.configure(
+            text="Movimientos de hoy" if es_hoy else f"Movimientos del {dia}/{mes}/{anio}")
+
+        self.dia_siguiente_button.configure(
+            state='disabled' if es_hoy else 'normal')
+        if es_hoy:
+            self.volver_hoy_button.pack_forget()
+        else:
+            self.volver_hoy_button.pack(side=LEFT, padx=(15, 0))
+
     def update_summary(self, data: dict) -> None:
         self.label_resultado_dia.configure(
             text=f"${data['resultado_dia']:.2f}",
             bootstyle="success" if data['resultado_dia'] >= 0 else "danger")
+        self.label_total_ventas_dia.configure(text=f"${data['total_ventas_dia']:.2f}")
+        self.label_total_gastos_dia.configure(text=f"${data['total_gastos_dia']:.2f}")
         self.fondo_inicial_entry.delete(0, 'end')
         self.fondo_inicial_entry.insert(0, f"{data['fondo_inicial']:.2f}")
         self.label_ventas_efectivo.configure(text=f"${data['ventas_efectivo']:.2f}")
@@ -300,20 +372,28 @@ class CajaForm(ttk.Frame):
             self.estado_label.configure(
                 text=f"Caja cerrada. Efectivo contado: ${data['efectivo_contado']:.2f} "
                      f"(diferencia: ${data['diferencia']:+.2f})")
-            self.fondo_inicial_entry.configure(state='disabled')
-            self.guardar_fondo_button.configure(state='disabled')
-            self.agregar_movimiento_button.configure(state='disabled')
-            self.cerrar_button.configure(state='disabled')
-            self.descripcion_entry.configure(state='disabled')
-            self.monto_entry.configure(state='disabled')
+        elif not data['es_hoy']:
+            if data['sin_datos']:
+                self.estado_label.configure(
+                    text="Ese día no se abrió la caja (no hay movimientos guardados). "
+                         "Solo lectura.")
+            else:
+                self.estado_label.configure(
+                    text="Estás viendo un día anterior. Solo lectura.")
         else:
             self.estado_label.configure(text="")
-            self.fondo_inicial_entry.configure(state='normal')
-            self.guardar_fondo_button.configure(state='normal')
-            self.agregar_movimiento_button.configure(state='normal')
-            self.cerrar_button.configure(state='normal')
-            self.descripcion_entry.configure(state='normal')
-            self.monto_entry.configure(state='normal')
+
+        estado_edicion = 'disabled' if data['bloqueada'] else 'normal'
+        self.fondo_inicial_entry.configure(state=estado_edicion)
+        self.guardar_fondo_button.configure(state=estado_edicion)
+        self.agregar_movimiento_button.configure(state=estado_edicion)
+        self.cerrar_button.configure(state=estado_edicion)
+        self.descripcion_entry.configure(state=estado_edicion)
+        self.monto_entry.configure(state=estado_edicion)
+        for btn in self.tipo_buttons.values():
+            btn.configure(state=estado_edicion)
+        for btn in self.forma_pago_buttons.values():
+            btn.configure(state=estado_edicion)
 
     def show_cerrar_dialog(self, efectivo_esperado: float) -> None:
         """Pide el efectivo contado y muestra la diferencia antes de cerrar."""
