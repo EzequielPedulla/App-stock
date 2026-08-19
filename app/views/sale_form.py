@@ -48,6 +48,7 @@ class SaleForm(ttk.Frame):
 
         self.barcode_entry = ttk.Entry(card, font=("Segoe UI", 12))
         self.barcode_entry.bind("<Return>", self._on_barcode_return)
+        self.barcode_entry.bind("<Escape>", self._on_escape_pressed)
         self.barcode_entry.grid(
             row=2, column=0, sticky=tk.EW, pady=(0, 10), padx=(0, 10))
 
@@ -57,6 +58,7 @@ class SaleForm(ttk.Frame):
         qty_label.grid(row=1, column=1, sticky=tk.W, pady=(0, 5))
 
         self.qty_entry = ttk.Entry(card, font=("Segoe UI", 12))
+        self.qty_entry.bind("<Escape>", self._on_escape_pressed)
         self.qty_entry.grid(row=2, column=1, sticky=tk.EW,
                             pady=(0, 10), padx=(0, 10))
 
@@ -498,6 +500,11 @@ class SaleForm(ttk.Frame):
     def _on_barcode_return(self, event) -> None:
         """Maneja el evento cuando se presiona Enter en el campo de código de barras."""
         self.event_generate("<<AddItem>>")
+
+    def _on_escape_pressed(self, event) -> None:
+        """Saca el foco del código de barras / cantidad, para que un Enter
+        posterior confirme la venta en vez de intentar agregar un ítem."""
+        self.focus_set()
 
     def _on_enter_pressed(self, event) -> None:
         """Maneja el evento cuando se presiona Enter en la ventana principal."""
