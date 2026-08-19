@@ -497,6 +497,12 @@ class SaleForm(ttk.Frame):
         # Prevenir que se cierre la ventana con la X
         self._payment_dialog.protocol("WM_DELETE_WINDOW", on_closing)
 
+        # Enter confirma el pago. "break" corta la propagación: sin esto,
+        # el mismo Enter también dispara el atajo global de confirmar
+        # venta (que acá no hace nada útil, porque el diálogo ya está
+        # abierto, pero igual conviene cortarlo en el origen).
+        self._payment_dialog.bind('<Return>', lambda e: confirm_payment() or "break")
+
     def _on_barcode_return(self, event) -> None:
         """Maneja el evento cuando se presiona Enter en el campo de código de barras."""
         self.event_generate("<<AddItem>>")
