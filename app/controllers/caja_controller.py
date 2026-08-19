@@ -48,22 +48,42 @@ class CajaController:
         self.sesion = sesion
         self._actualizar_pantalla()
 
-    def _actualizar_pantalla(self) -> None:
-        sesion = self.sesion
-        movimientos = self.db.get_caja_movimientos(sesion['id'])
-        ventas = self.db.get_ventas_totales_por_metodo(sesion['fecha'])
-
-        total_gastos = sum(
-            float(m['monto']) for m in movimientos if m['tipo'] == 'gasto')
+    def _totales_movimientos(self, movimientos: list) -> dict:
+        """Suma los movimientos del día, separando los gastos según cómo se
+        pagaron: solo el gasto en efectivo sale de la caja física, uno
+        pagado por transferencia (o directamente del bolsillo del dueño)
+        no la toca."""
+        gastos_efectivo = sum(
+            float(m['monto']) for m in movimientos
+            if m['tipo'] == 'gasto' and m['forma_pago'] == 'efectivo')
+        gastos_transferencia = sum(
+            float(m['monto']) for m in movimientos
+            if m['tipo'] == 'gasto' and m['forma_pago'] == 'transferencia')
         total_retiros = sum(
             float(m['monto']) for m in movimientos if m['tipo'] == 'retiro')
         total_bolsillo = sum(
             float(m['monto']) for m in movimientos if m['tipo'] == 'bolsillo')
+        return {
+            'gastos_efectivo': gastos_efectivo,
+            'gastos_transferencia': gastos_transferencia,
+            'total_retiros': total_retiros,
+            'total_bolsillo': total_bolsillo,
+        }
+
+    def _calcular_efectivo_esperado(self, sesion, movimientos, ventas) -> float:
+        totales = self._totales_movimientos(movimientos)
+        return (float(sesion['fondo_inicial']) + ventas['efectivo']
+                - totales['gastos_efectivo'] - totales['total_retiros'])
+
+    def _actualizar_pantalla(self) -> None:
+        sesion = self.sesion
+        movimientos = self.db.get_caja_movimientos(sesion['id'])
+        ventas = self.db.get_ventas_totales_por_metodo(sesion['fecha'])
+        totales = self._totales_movimientos(movimientos)
 
         fondo_inicial = float(sesion['fondo_inicial'])
-        # El pago "de bolsillo" no sale de la caja física, así que no resta acá.
-        efectivo_esperado = (
-            fondo_inicial + ventas['efectivo'] - total_gastos - total_retiros)
+        efectivo_esperado = self._calcular_efectivo_esperado(
+            sesion, movimientos, ventas)
 
         cerrada = bool(sesion['cerrada'])
         efectivo_contado = (
@@ -77,9 +97,10 @@ class CajaController:
             'ventas_transferencia': ventas['transferencia'],
             'ventas_posnet': ventas['posnet'],
             'ventas_fiado': ventas['fiado'],
-            'total_gastos': total_gastos,
-            'total_retiros': total_retiros,
-            'total_bolsillo': total_bolsillo,
+            'total_gastos_efectivo': totales['gastos_efectivo'],
+            'total_gastos_transferencia': totales['gastos_transferencia'],
+            'total_retiros': totales['total_retiros'],
+            'total_bolsillo': totales['total_bolsillo'],
             'efectivo_esperado': efectivo_esperado,
             'cerrada': cerrada,
             'efectivo_contado': efectivo_contado,
@@ -99,9 +120,14 @@ class CajaController:
     def agregar_movimiento(self) -> None:
         data = self.caja_form.get_movimiento_data()
 
-        if not data['descripcion']:
-            messagebox.showerror("Error", "Ingrese una descripción")
-            return
+        descripcion = data['descripcion']
+        if not descripcion:
+            if data['tipo'] == 'retiro':
+                # El retiro no necesita explicación como un gasto puntual.
+                descripcion = 'Retiro'
+            else:
+                messagebox.showerror("Error", "Ingrese una descripción")
+                return
         try:
             monto = float(data['monto'])
             if monto <= 0:
@@ -110,8 +136,13 @@ class CajaController:
             messagebox.showerror("Error", "Ingrese un monto válido")
             return
 
+        # La forma de pago solo aplica a gastos (retiro y bolsillo siempre
+        # son "no efectivo desde la caja" o "efectivo", respectivamente,
+        # por definición).
+        forma_pago = data['forma_pago'] if data['tipo'] == 'gasto' else 'efectivo'
+
         self.db.add_caja_movimiento(
-            self.sesion['id'], data['tipo'], data['descripcion'], monto)
+            self.sesion['id'], data['tipo'], descripcion, monto, forma_pago)
         self.caja_form.clear_movimiento_fields()
         self.refresh()
 
@@ -131,12 +162,7 @@ class CajaController:
     def _efectivo_esperado_actual(self) -> float:
         movimientos = self.db.get_caja_movimientos(self.sesion['id'])
         ventas = self.db.get_ventas_totales_por_metodo(self.sesion['fecha'])
-        total_gastos = sum(
-            float(m['monto']) for m in movimientos if m['tipo'] == 'gasto')
-        total_retiros = sum(
-            float(m['monto']) for m in movimientos if m['tipo'] == 'retiro')
-        return (float(self.sesion['fondo_inicial']) + ventas['efectivo']
-                - total_gastos - total_retiros)
+        return self._calcular_efectivo_esperado(self.sesion, movimientos, ventas)
 
     def cerrar_caja(self, efectivo_contado: float) -> None:
         self.db.cerrar_caja_sesion(self.sesion['id'], efectivo_contado)

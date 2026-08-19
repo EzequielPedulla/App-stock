@@ -83,11 +83,13 @@ class Database:
                 descripcion VARCHAR(200) NOT NULL,
                 monto REAL NOT NULL,
                 fecha DATETIME NOT NULL,
+                forma_pago VARCHAR(20) NOT NULL DEFAULT 'efectivo',
                 FOREIGN KEY (sesion_id) REFERENCES caja_sesiones(id)
             )
         ''')
 
         self._migrate_add_payment_method_column()
+        self._migrate_add_forma_pago_column()
         self.connection.commit()
 
     def _migrate_add_payment_method_column(self):
@@ -98,6 +100,17 @@ class Database:
         if 'payment_method' not in columns:
             self.cursor.execute(
                 "ALTER TABLE sales ADD COLUMN payment_method "
+                "VARCHAR(20) NOT NULL DEFAULT 'efectivo'"
+            )
+
+    def _migrate_add_forma_pago_column(self):
+        """Agrega forma_pago a caja_movimientos creadas antes de que
+        existiera esta columna."""
+        self.cursor.execute("PRAGMA table_info(caja_movimientos)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if 'forma_pago' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE caja_movimientos ADD COLUMN forma_pago "
                 "VARCHAR(20) NOT NULL DEFAULT 'efectivo'"
             )
 
@@ -269,12 +282,13 @@ class Database:
         self.connection.commit()
 
     def add_caja_movimiento(self, sesion_id: int, tipo: str, descripcion: str,
-                            monto: float) -> int:
+                            monto: float, forma_pago: str = 'efectivo') -> int:
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.cursor.execute(
-            """INSERT INTO caja_movimientos (sesion_id, tipo, descripcion, monto, fecha)
-               VALUES (?, ?, ?, ?, ?)""",
-            (sesion_id, tipo, descripcion, monto, now)
+            """INSERT INTO caja_movimientos
+               (sesion_id, tipo, descripcion, monto, fecha, forma_pago)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (sesion_id, tipo, descripcion, monto, now, forma_pago)
         )
         self.connection.commit()
         return self.cursor.lastrowid

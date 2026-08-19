@@ -9,6 +9,7 @@ class CajaForm(ttk.Frame):
         self.pack(fill=BOTH, expand=True)
         self.caja_controller = None  # Lo setea el controlador
         self.tipo_seleccionado = 'gasto'
+        self.forma_pago_seleccionada = 'efectivo'
         self._create_widgets()
 
     def _create_widgets(self):
@@ -54,9 +55,10 @@ class CajaForm(ttk.Frame):
             fondo_frame, text="Guardar", width=9, bootstyle="secondary")
         self.guardar_fondo_button.pack(side=LEFT, padx=(5, 0))
 
-        self._resumen_label("Total Gastos:", 1, 2, resumen_card, "label_total_gastos")
+        self._resumen_label("Gastos en efectivo:", 1, 2, resumen_card, "label_total_gastos_efectivo")
         self._resumen_label("Total Retiros:", 2, 0, resumen_card, "label_total_retiros")
-        self._resumen_label("Pagos de bolsillo (no afecta la caja):", 2, 2, resumen_card, "label_total_bolsillo")
+        self._resumen_label("Gastos por transferencia (no afecta la caja):", 2, 2, resumen_card, "label_total_gastos_transferencia")
+        self._resumen_label("Pagos de bolsillo (no afecta la caja):", 3, 0, resumen_card, "label_total_bolsillo")
 
         # ===== Banner de efectivo esperado (color según el signo) =====
         efectivo_card = ttk.Frame(self, bootstyle="light", padding=20)
@@ -100,7 +102,27 @@ class CajaForm(ttk.Frame):
             btn.pack(side=LEFT, padx=(0, 5))
             self.tipo_buttons[tipo] = btn
 
-        form_row = ttk.Frame(mov_card)
+        # Forma de pago del gasto: solo aplica cuando tipo == 'gasto' (un
+        # retiro siempre es efectivo por definición, y el bolsillo del
+        # dueño ya está separado como su propia categoría).
+        self.forma_pago_row = ttk.Frame(mov_card)
+        self.forma_pago_row.pack(fill=X, pady=(0, 10))
+        ttk.Label(
+            self.forma_pago_row, text="¿Cómo se pagó este gasto?",
+            font=("Segoe UI", 10), foreground="gray"
+        ).pack(side=LEFT, padx=(0, 10))
+        self.forma_pago_buttons = {}
+        for forma, label in (('efectivo', 'Efectivo (caja)'),
+                             ('transferencia', 'Transferencia')):
+            btn = ttk.Button(
+                self.forma_pago_row, text=label, width=15,
+                bootstyle="primary" if forma == 'efectivo' else "secondary",
+                command=lambda f=forma: self._select_forma_pago(f)
+            )
+            btn.pack(side=LEFT, padx=(0, 5))
+            self.forma_pago_buttons[forma] = btn
+
+        form_row = self.mov_form_row = ttk.Frame(mov_card)
         form_row.pack(fill=X)
 
         ttk.Label(form_row, text="Descripción:", font=("Segoe UI", 11)).grid(
@@ -175,11 +197,22 @@ class CajaForm(ttk.Frame):
         for t, btn in self.tipo_buttons.items():
             btn.configure(bootstyle="primary" if t == tipo else "secondary")
 
+        if tipo == 'gasto':
+            self.forma_pago_row.pack(fill=X, pady=(0, 10), before=self.mov_form_row)
+        else:
+            self.forma_pago_row.pack_forget()
+
+    def _select_forma_pago(self, forma: str) -> None:
+        self.forma_pago_seleccionada = forma
+        for f, btn in self.forma_pago_buttons.items():
+            btn.configure(bootstyle="primary" if f == forma else "secondary")
+
     def get_movimiento_data(self) -> dict:
         return {
             'descripcion': self.descripcion_entry.get().strip(),
             'monto': self.monto_entry.get().strip(),
             'tipo': self.tipo_seleccionado,
+            'forma_pago': self.forma_pago_seleccionada,
         }
 
     def clear_movimiento_fields(self) -> None:
@@ -192,15 +225,19 @@ class CajaForm(ttk.Frame):
             self.tree.delete(item)
 
         etiquetas_tipo = {
-            'gasto': 'Gasto',
             'retiro': 'Retiro',
             'bolsillo': 'Bolsillo',
         }
         for i, mov in enumerate(movimientos):
             hora = str(mov['fecha'])[11:16] if len(str(mov['fecha'])) > 10 else ''
+            if mov['tipo'] == 'gasto':
+                tipo_texto = ('Gasto (efectivo)' if mov['forma_pago'] == 'efectivo'
+                              else 'Gasto (transferencia)')
+            else:
+                tipo_texto = etiquetas_tipo.get(mov['tipo'], mov['tipo'])
             self.tree.insert('', 'end', iid=str(mov['id']), values=(
                 hora,
-                etiquetas_tipo.get(mov['tipo'], mov['tipo']),
+                tipo_texto,
                 mov['descripcion'],
                 f"${float(mov['monto']):.2f}"
             ), tags=('evenrow' if i % 2 == 0 else 'oddrow',))
@@ -212,7 +249,8 @@ class CajaForm(ttk.Frame):
         self.label_ventas_transferencia.configure(text=f"${data['ventas_transferencia']:.2f}")
         self.label_ventas_posnet.configure(text=f"${data['ventas_posnet']:.2f}")
         self.label_ventas_fiado.configure(text=f"${data['ventas_fiado']:.2f}")
-        self.label_total_gastos.configure(text=f"${data['total_gastos']:.2f}")
+        self.label_total_gastos_efectivo.configure(text=f"${data['total_gastos_efectivo']:.2f}")
+        self.label_total_gastos_transferencia.configure(text=f"${data['total_gastos_transferencia']:.2f}")
         self.label_total_retiros.configure(text=f"${data['total_retiros']:.2f}")
         self.label_total_bolsillo.configure(text=f"${data['total_bolsillo']:.2f}")
         self.label_efectivo_esperado.configure(
