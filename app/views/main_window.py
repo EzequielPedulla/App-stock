@@ -6,16 +6,29 @@ from .product_list import ProductList
 from .sale_form import SaleForm
 from .caja_form import CajaForm
 from .report_form import ReportForm
+from .scrollable_frame import ScrollableFrame
 
 
 class MainWindow(ttk.Window):
     def __init__(self):
         super().__init__(title="Sistema de Gestión de Inventario",
-                         themename="flatly",
-                         size=(1400, 750))
+                         themename="flatly")
         self.resizable(True, True)
+        self.minsize(900, 550)
+        self._ajustar_tamano_inicial()
         self._setup_custom_styles()
         self._create_widgets()
+
+    def _ajustar_tamano_inicial(self) -> None:
+        """Usa la mayor parte de la pantalla disponible, sin superar un
+        tamaño cómodo ni exceder el monitor real (puede ser chico)."""
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        width = min(1400, int(screen_w * 0.9))
+        height = min(750, int(screen_h * 0.85))
+        x = (screen_w - width) // 2
+        y = (screen_h - height) // 2
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _setup_custom_styles(self) -> None:
         """Configura estilos personalizados para los botones del menú."""
@@ -71,27 +84,38 @@ class MainWindow(ttk.Window):
         self.contenido_interno = tk.Frame(self.frame_contenido, bg="white")
         self.contenido_interno.pack(padx=30, pady=30, fill=BOTH, expand=True)
 
+        # Cada pestaña envuelve su contenido en un ScrollableFrame: si la
+        # ventana queda chica (monitor chico o achicada a mano), lo que no
+        # entra se alcanza con la scrollbar en vez de quedar cortado.
+
         # Frame para productos (formulario + lista)
         self.productos_frame = tk.Frame(self.contenido_interno, bg="white")
         self.productos_frame.pack(fill=BOTH, expand=True)
-        self.product_form = ProductForm(self.productos_frame)
-        self.product_list = ProductList(self.productos_frame)
+        productos_scroll = ScrollableFrame(self.productos_frame)
+        productos_scroll.pack(fill=BOTH, expand=True)
+        self.product_form = ProductForm(productos_scroll.interior)
+        self.product_list = ProductList(productos_scroll.interior)
         self.product_form.pack(side="top", fill="x", pady=(0, 10))
         self.product_list.pack(side="top", fill="both", expand=True)
 
         # Frame para ventas (solo se muestra cuando corresponde)
         self.ventas_frame = tk.Frame(self.contenido_interno, bg="white")
-        self.sale_form = SaleForm(self.ventas_frame)
+        ventas_scroll = ScrollableFrame(self.ventas_frame)
+        ventas_scroll.pack(fill=BOTH, expand=True)
+        self.sale_form = SaleForm(ventas_scroll.interior)
         self.sale_form.pack(fill=BOTH, expand=True)
 
         # Frame para caja (solo se muestra cuando corresponde)
         self.caja_frame = tk.Frame(self.contenido_interno, bg="white")
-        self.caja_form = CajaForm(self.caja_frame)
+        caja_scroll = ScrollableFrame(self.caja_frame)
+        caja_scroll.pack(fill=BOTH, expand=True)
+        self.caja_form = CajaForm(caja_scroll.interior)
         self.caja_form.pack(fill=BOTH, expand=True)
 
         self.reports_frame = tk.Frame(self.contenido_interno, bg="white")
-
-        self.report_form = ReportForm(self.reports_frame)
+        reports_scroll = ScrollableFrame(self.reports_frame)
+        reports_scroll.pack(fill=BOTH, expand=True)
+        self.report_form = ReportForm(reports_scroll.interior)
         self.report_form.pack(fill=BOTH, expand=True)
 
         self.show_products()

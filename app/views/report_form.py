@@ -99,10 +99,12 @@ class ReportForm(ttk.Frame):
         bottom_container = ttk.Frame(self)
         bottom_container.pack(fill=BOTH, expand=True)
 
-        # Card: Productos más vendidos (placeholder para gráfico)
+        # Gráfico y tabla apilados (no lado a lado): así en una ventana
+        # angosta ninguno de los dos queda apretado fuera de la vista, ya
+        # que el scroll de la pestaña es vertical.
         card_grafico = ttk.Frame(
             bottom_container, bootstyle="light", padding=20)
-        card_grafico.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 10))
+        card_grafico.pack(side=TOP, fill=BOTH, expand=True, pady=(0, 15))
 
         ttk.Label(
             card_grafico,
@@ -116,7 +118,7 @@ class ReportForm(ttk.Frame):
 
         # Card: Historial de ventas (tabla)
         card_tabla = ttk.Frame(bottom_container, bootstyle="light", padding=20)
-        card_tabla.pack(side=RIGHT, fill=Y, padx=(10, 0))
+        card_tabla.pack(side=TOP, fill=BOTH, expand=True)
 
         ttk.Label(
             card_tabla,
