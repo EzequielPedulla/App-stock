@@ -22,6 +22,25 @@ class CajaForm(ttk.Frame):
             self, text="", font=("Segoe UI", 11, "bold"), foreground="#c0392b")
         self.estado_label.pack(anchor=W, pady=(0, 10))
 
+        # ===== Resultado del día: el número más importante de la
+        # pantalla, arriba de todo, bien grande. Es la respuesta directa
+        # a "¿cuánto gané hoy?": todo lo vendido menos lo que salió. =====
+        resultado_card = ttk.Frame(self, bootstyle="light", padding=20)
+        resultado_card.pack(fill=X, pady=(0, 15))
+
+        ttk.Label(
+            resultado_card, text="Resultado de hoy",
+            font=("Segoe UI", 14)
+        ).pack(anchor=W)
+        self.label_resultado_dia = ttk.Label(
+            resultado_card, text="$0.00", font=("Segoe UI", 32, "bold"),
+            bootstyle="success")
+        self.label_resultado_dia.pack(anchor=W, pady=(5, 5))
+        ttk.Label(
+            resultado_card, text="Total vendido menos gastos y retiros del día",
+            font=("Segoe UI", 10), foreground="gray"
+        ).pack(anchor=W)
+
         # ===== Fila de tarjetas: ventas del día por método =====
         ventas_row = ttk.Frame(self)
         ventas_row.pack(fill=X, pady=(0, 15))
@@ -154,9 +173,17 @@ class CajaForm(ttk.Frame):
         table_frame = ttk.Frame(self, bootstyle="light", padding=10)
         table_frame.pack(fill=BOTH, expand=True)
 
+        # Esta tabla era la única de toda la app sin un estilo de letra
+        # propio, así que quedaba con el tamaño chico por defecto de ttk
+        # en vez de acompañar al resto (11-12pt en todos lados).
+        style = ttk.Style()
+        style.configure("Caja.Treeview", rowheight=38, font=('Segoe UI', 12))
+        style.configure("Caja.Treeview.Heading", font=('Segoe UI', 12, 'bold'))
+
         columns = ("hora", "tipo", "descripcion", "monto")
         self.tree = ttk.Treeview(
-            table_frame, columns=columns, show="headings", height=8)
+            table_frame, columns=columns, show="headings", height=8,
+            style="Caja.Treeview")
         self.tree.heading("hora", text="Hora", anchor=CENTER)
         self.tree.heading("tipo", text="Tipo", anchor=CENTER)
         self.tree.heading("descripcion", text="Descripción", anchor=W)
@@ -248,6 +275,9 @@ class CajaForm(ttk.Frame):
             ), tags=('evenrow' if i % 2 == 0 else 'oddrow',))
 
     def update_summary(self, data: dict) -> None:
+        self.label_resultado_dia.configure(
+            text=f"${data['resultado_dia']:.2f}",
+            bootstyle="success" if data['resultado_dia'] >= 0 else "danger")
         self.fondo_inicial_entry.delete(0, 'end')
         self.fondo_inicial_entry.insert(0, f"{data['fondo_inicial']:.2f}")
         self.label_ventas_efectivo.configure(text=f"${data['ventas_efectivo']:.2f}")

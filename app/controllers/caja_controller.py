@@ -75,6 +75,19 @@ class CajaController:
         return (float(sesion['fondo_inicial']) + ventas['efectivo']
                 - totales['gastos_efectivo'] - totales['total_retiros'])
 
+    def _calcular_resultado_dia(self, movimientos, ventas) -> float:
+        """Cuánto se ganó hoy en limpio: todo lo vendido y cobrado (no
+        cuenta fiado, todavía no entró esa plata) menos todo lo que salió
+        por gastos y retiros (no cuenta bolsillo, no es plata del negocio).
+        """
+        totales = self._totales_movimientos(movimientos)
+        total_vendido = (
+            ventas['efectivo'] + ventas['transferencia'] + ventas['posnet'])
+        total_egresos = (
+            totales['gastos_efectivo'] + totales['gastos_transferencia']
+            + totales['total_retiros'])
+        return total_vendido - total_egresos
+
     def _actualizar_pantalla(self) -> None:
         sesion = self.sesion
         movimientos = self.db.get_caja_movimientos(sesion['id'])
@@ -84,6 +97,7 @@ class CajaController:
         fondo_inicial = float(sesion['fondo_inicial'])
         efectivo_esperado = self._calcular_efectivo_esperado(
             sesion, movimientos, ventas)
+        resultado_dia = self._calcular_resultado_dia(movimientos, ventas)
 
         cerrada = bool(sesion['cerrada'])
         efectivo_contado = (
@@ -92,6 +106,7 @@ class CajaController:
 
         self.caja_form.load_movimientos(movimientos)
         self.caja_form.update_summary({
+            'resultado_dia': resultado_dia,
             'fondo_inicial': fondo_inicial,
             'ventas_efectivo': ventas['efectivo'],
             'ventas_transferencia': ventas['transferencia'],
