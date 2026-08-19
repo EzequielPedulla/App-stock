@@ -21,12 +21,25 @@ class CajaForm(ttk.Frame):
             self, text="", font=("Segoe UI", 11, "bold"), foreground="#c0392b")
         self.estado_label.pack(anchor=W, pady=(0, 10))
 
-        # ===== Card de resumen =====
-        resumen_card = ttk.Frame(self, style="Card.TFrame", padding=20)
+        # ===== Fila de tarjetas: ventas del día por método =====
+        ventas_row = ttk.Frame(self)
+        ventas_row.pack(fill=X, pady=(0, 15))
+
+        self.label_ventas_efectivo = self._stat_card(
+            ventas_row, "Ventas Efectivo", "success")
+        self.label_ventas_transferencia = self._stat_card(
+            ventas_row, "Ventas Transferencia", "info")
+        self.label_ventas_posnet = self._stat_card(
+            ventas_row, "Ventas Posnet", "info")
+        self.label_ventas_fiado = self._stat_card(
+            ventas_row, "Ventas Fiado (no cobradas)", "secondary")
+
+        # ===== Card de fondo inicial y egresos =====
+        resumen_card = ttk.Frame(self, bootstyle="light", padding=20)
         resumen_card.pack(fill=X, pady=(0, 15))
 
         ttk.Label(
-            resumen_card, text="Resumen del día",
+            resumen_card, text="Fondo y egresos del día",
             font=("Segoe UI", 14, "bold")
         ).grid(row=0, column=0, columnspan=4, sticky=W, pady=(0, 15))
 
@@ -41,32 +54,29 @@ class CajaForm(ttk.Frame):
             fondo_frame, text="Guardar", width=9, bootstyle="secondary")
         self.guardar_fondo_button.pack(side=LEFT, padx=(5, 0))
 
-        self._resumen_label("Ventas Efectivo:", 2, 0, resumen_card, "label_ventas_efectivo")
-        self._resumen_label("Ventas Transferencia:", 2, 2, resumen_card, "label_ventas_transferencia")
-        self._resumen_label("Ventas Posnet:", 3, 0, resumen_card, "label_ventas_posnet")
-        self._resumen_label("Ventas Fiado (no cobradas):", 3, 2, resumen_card, "label_ventas_fiado")
-        self._resumen_label("Total Gastos:", 4, 0, resumen_card, "label_total_gastos")
-        self._resumen_label("Total Retiros:", 4, 2, resumen_card, "label_total_retiros")
-        self._resumen_label("Pagos de bolsillo (no afecta la caja):", 5, 0, resumen_card, "label_total_bolsillo")
+        self._resumen_label("Total Gastos:", 1, 2, resumen_card, "label_total_gastos")
+        self._resumen_label("Total Retiros:", 2, 0, resumen_card, "label_total_retiros")
+        self._resumen_label("Pagos de bolsillo (no afecta la caja):", 2, 2, resumen_card, "label_total_bolsillo")
 
-        ttk.Separator(resumen_card, orient='horizontal').grid(
-            row=6, column=0, columnspan=4, sticky=EW, pady=12)
+        # ===== Banner de efectivo esperado (color según el signo) =====
+        efectivo_card = ttk.Frame(self, bootstyle="light", padding=20)
+        efectivo_card.pack(fill=X, pady=(0, 15))
 
         ttk.Label(
-            resumen_card, text="Efectivo esperado en caja:",
-            font=("Segoe UI", 13, "bold")
-        ).grid(row=7, column=0, columnspan=2, sticky=W)
+            efectivo_card, text="Efectivo esperado en caja",
+            font=("Segoe UI", 13)
+        ).pack(side=LEFT)
         self.label_efectivo_esperado = ttk.Label(
-            resumen_card, text="$0.00", font=("Segoe UI", 16, "bold"),
+            efectivo_card, text="$0.00", font=("Segoe UI", 22, "bold"),
             bootstyle="success")
-        self.label_efectivo_esperado.grid(row=7, column=2, columnspan=2, sticky=W)
+        self.label_efectivo_esperado.pack(side=LEFT, padx=(15, 0))
 
         self.cerrar_button = ttk.Button(
-            resumen_card, text="🔒 Cerrar Caja", bootstyle="danger", width=18)
-        self.cerrar_button.grid(row=8, column=0, columnspan=4, sticky=W, pady=(15, 0))
+            efectivo_card, text="🔒 Cerrar Caja", bootstyle="danger", width=18)
+        self.cerrar_button.pack(side=RIGHT)
 
         # ===== Card para agregar movimientos =====
-        mov_card = ttk.Frame(self, style="Card.TFrame", padding=20)
+        mov_card = ttk.Frame(self, bootstyle="light", padding=20)
         mov_card.pack(fill=X, pady=(0, 15))
 
         ttk.Label(
@@ -114,7 +124,7 @@ class CajaForm(ttk.Frame):
             self, text="Movimientos de hoy", font=("Segoe UI", 14, "bold")
         ).pack(anchor=W, pady=(0, 10))
 
-        table_frame = ttk.Frame(self, style="Card.TFrame", padding=10)
+        table_frame = ttk.Frame(self, bootstyle="light", padding=10)
         table_frame.pack(fill=BOTH, expand=True)
 
         columns = ("hora", "tipo", "descripcion", "monto")
@@ -144,6 +154,21 @@ class CajaForm(ttk.Frame):
         label = ttk.Label(parent, text="$0.00", font=("Segoe UI", 12, "bold"))
         label.grid(row=row, column=col + 1, sticky=W, padx=(10, 30))
         setattr(self, attr_name, label)
+
+    def _stat_card(self, parent, title: str, bootstyle: str) -> ttk.Label:
+        """Crea una tarjeta chica tipo Reportes (título + número grande) y
+        devuelve el label del número para que se pueda actualizar después."""
+        card = ttk.Frame(parent, bootstyle="light", padding=15)
+        card.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 10))
+
+        ttk.Label(
+            card, text=title, font=("Segoe UI", 10), wraplength=140
+        ).pack(anchor=W)
+        value_label = ttk.Label(
+            card, text="$0.00", font=("Segoe UI", 18, "bold"),
+            bootstyle=bootstyle)
+        value_label.pack(anchor=W, pady=(6, 0))
+        return value_label
 
     def _select_tipo(self, tipo: str) -> None:
         self.tipo_seleccionado = tipo
@@ -190,7 +215,9 @@ class CajaForm(ttk.Frame):
         self.label_total_gastos.configure(text=f"${data['total_gastos']:.2f}")
         self.label_total_retiros.configure(text=f"${data['total_retiros']:.2f}")
         self.label_total_bolsillo.configure(text=f"${data['total_bolsillo']:.2f}")
-        self.label_efectivo_esperado.configure(text=f"${data['efectivo_esperado']:.2f}")
+        self.label_efectivo_esperado.configure(
+            text=f"${data['efectivo_esperado']:.2f}",
+            bootstyle="success" if data['efectivo_esperado'] >= 0 else "danger")
 
         if data['cerrada']:
             self.estado_label.configure(

@@ -32,7 +32,7 @@ class SaleForm(ttk.Frame):
             self.slot_buttons.append(btn)
 
         # Card para el formulario
-        card = ttk.Frame(self, style="Card.TFrame", padding=20)
+        card = ttk.Frame(self, bootstyle="light", padding=20)
         card.pack(fill=tk.X, pady=(0, 20))
 
         # Subtítulo
@@ -121,7 +121,7 @@ class SaleForm(ttk.Frame):
         self.info_label.pack(side='left', padx=(10, 0))
 
         # Frame para la tabla
-        table_frame = ttk.Frame(self, style="Card.TFrame", padding=10)
+        table_frame = ttk.Frame(self, bootstyle="light", padding=10)
         table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         # Configurar el estilo antes de crear la tabla
