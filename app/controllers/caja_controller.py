@@ -16,6 +16,7 @@ class CajaController:
         self.db = Database()
         self.sesion = None
         self.fecha_actual = self._hoy()
+        self._fecha_pendiente = None
         self._connect_events()
         self.refresh()
 
@@ -27,12 +28,16 @@ class CajaController:
         self.caja_form.cerrar_button.configure(command=self.abrir_cierre)
         self.caja_form.tree.bind(
             '<Delete>', lambda e: self.eliminar_movimiento())
+        self.caja_form.tree.bind(
+            '<Double-1>', lambda e: self.editar_movimiento_seleccionado())
         self.caja_form.dia_anterior_button.configure(
             command=self.ir_dia_anterior)
         self.caja_form.dia_siguiente_button.configure(
             command=self.ir_dia_siguiente)
         self.caja_form.volver_hoy_button.configure(
             command=self.volver_a_hoy)
+        self.caja_form.ir_a_pendiente_button.configure(
+            command=self.ir_a_dia_pendiente)
 
     def _hoy(self) -> str:
         return datetime.now().strftime('%Y-%m-%d')
@@ -53,12 +58,18 @@ class CajaController:
         self.fecha_actual = self._hoy()
         self.refresh()
 
+    def ir_a_dia_pendiente(self) -> None:
+        if self._fecha_pendiente:
+            self.fecha_actual = self._fecha_pendiente
+            self.refresh()
+
     def refresh(self) -> None:
         """Carga (o crea) la sesión de caja del día que se está viendo y
-        actualiza la pantalla. Solo el día de hoy se crea/edita: los días
-        anteriores se muestran en modo solo lectura con lo que haya
-        quedado guardado (si ese día nunca se abrió la caja, se ve vacío,
-        pero igual con las ventas reales de ese día)."""
+        actualiza la pantalla. Un día se puede editar mientras su caja
+        siga sin cerrar (sea hoy o un día anterior que se olvidaron de
+        cerrar); una vez cerrada queda fija. Los días que nunca se
+        abrieron se muestran en modo solo lectura (pero igual con las
+        ventas reales de ese día, que sí quedaron registradas)."""
         fecha = self.fecha_actual
         es_hoy = (fecha == self._hoy())
         sesion = self.db.get_caja_sesion_by_fecha(fecha)
@@ -154,11 +165,20 @@ class CajaController:
             totales['gastos_efectivo'] + totales['gastos_transferencia']
             + totales['total_retiros'])
 
-        # Solo se puede editar/agregar movimientos en el día de hoy: los
-        # días anteriores quedan como consulta, no se retocan.
-        bloqueada = cerrada or not es_hoy
+        # Un día sin sesión (nunca se abrió la caja ese día) o ya cerrado
+        # queda como consulta. Un día abierto (hoy, o uno anterior que
+        # quedó sin cerrar) se puede seguir editando.
+        bloqueada = cerrada or sesion is None
+
+        # Si hoy hay un día anterior que quedó sin cerrar, se avisa para
+        # que lo puedan terminar (si no, el fondo inicial de hoy no
+        # arrastra bien el efectivo contado de ese día).
+        pendiente = (
+            self.db.get_caja_sesion_abierta_anterior(fecha) if es_hoy else None)
+        self._fecha_pendiente = pendiente['fecha'] if pendiente else None
 
         self.caja_form.update_fecha(fecha, es_hoy)
+        self.caja_form.update_aviso_pendiente(self._fecha_pendiente)
         self.caja_form.load_movimientos(movimientos)
         self.caja_form.update_summary({
             'resultado_dia': resultado_dia,
@@ -184,7 +204,7 @@ class CajaController:
         })
 
     def _puede_editar(self) -> bool:
-        if self.fecha_actual != self._hoy() or self.sesion is None:
+        if self.sesion is None:
             return False
         return not bool(self.sesion['cerrada'])
 
@@ -231,6 +251,28 @@ class CajaController:
         self.db.add_caja_movimiento(
             self.sesion['id'], data['tipo'], descripcion, monto, forma_pago)
         self.caja_form.clear_movimiento_fields()
+        self.refresh()
+
+    def editar_movimiento_seleccionado(self) -> None:
+        if not self._puede_editar():
+            return
+        selected = self.caja_form.tree.selection()
+        if not selected:
+            return
+        movimiento_id = int(selected[0])
+        movimientos = self.db.get_caja_movimientos(self.sesion['id'])
+        movimiento = next(
+            (m for m in movimientos if m['id'] == movimiento_id), None)
+        if movimiento is None:
+            return
+        self.caja_form.show_editar_movimiento_dialog(
+            movimiento, self._guardar_edicion_movimiento)
+
+    def _guardar_edicion_movimiento(
+            self, movimiento_id: int, descripcion: str, monto: float,
+            forma_pago: str) -> None:
+        self.db.update_caja_movimiento(
+            movimiento_id, descripcion, monto, forma_pago)
         self.refresh()
 
     def eliminar_movimiento(self) -> None:

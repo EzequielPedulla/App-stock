@@ -19,8 +19,8 @@ class CajaForm(ttk.Frame):
         ).pack(anchor=W, pady=(0, 15))
 
         # ===== Navegación entre días: por defecto se ve hoy, pero se
-        # puede ir para atrás a revisar días anteriores (sin poder
-        # editarlos) y volver a hoy con un solo botón. =====
+        # puede ir para atrás a revisar días anteriores (editables solo
+        # si esa caja quedó sin cerrar) y volver a hoy con un botón. =====
         nav_row = ttk.Frame(self)
         nav_row.pack(fill=X, pady=(0, 10))
         self.dia_anterior_button = ttk.Button(
@@ -35,6 +35,19 @@ class CajaForm(ttk.Frame):
         self.volver_hoy_button = ttk.Button(
             nav_row, text="Volver a hoy", bootstyle="info", width=12)
         # Se muestra/oculta según el día que se esté viendo (ver update_fecha).
+
+        # Aviso si un día anterior quedó sin cerrar la caja, con acceso
+        # directo para terminarlo (ver update_aviso_pendiente).
+        self.aviso_pendiente_frame = ttk.Frame(
+            self, bootstyle="warning", padding=10)
+        self.aviso_pendiente_label = ttk.Label(
+            self.aviso_pendiente_frame, text="",
+            font=("Segoe UI", 10, "bold"), bootstyle="inverse-warning")
+        self.aviso_pendiente_label.pack(side=LEFT)
+        self.ir_a_pendiente_button = ttk.Button(
+            self.aviso_pendiente_frame, text="Ir a ese día",
+            bootstyle="dark", width=14)
+        self.ir_a_pendiente_button.pack(side=RIGHT)
 
         self.estado_label = ttk.Label(
             self, text="", font=("Segoe UI", 11, "bold"), foreground="#c0392b")
@@ -347,6 +360,18 @@ class CajaForm(ttk.Frame):
         else:
             self.volver_hoy_button.pack(side=LEFT, padx=(15, 0))
 
+    def update_aviso_pendiente(self, fecha_pendiente) -> None:
+        """Muestra un aviso si un día anterior quedó sin cerrar la caja
+        (solo tiene sentido chequearlo estando en el día de hoy)."""
+        if fecha_pendiente:
+            anio, mes, dia = fecha_pendiente.split('-')
+            self.aviso_pendiente_label.configure(
+                text=f"⚠ El día {dia}/{mes}/{anio} quedó sin cerrar la caja.")
+            self.aviso_pendiente_frame.pack(
+                fill=X, pady=(0, 10), before=self.estado_label)
+        else:
+            self.aviso_pendiente_frame.pack_forget()
+
     def update_summary(self, data: dict) -> None:
         self.label_resultado_dia.configure(
             text=f"${data['resultado_dia']:.2f}",
@@ -368,18 +393,17 @@ class CajaForm(ttk.Frame):
             text=f"${data['efectivo_esperado']:.2f}",
             bootstyle="success" if data['efectivo_esperado'] >= 0 else "danger")
 
-        if data['cerrada']:
+        if data['sin_datos']:
+            self.estado_label.configure(
+                text="Ese día no se abrió la caja (no hay movimientos guardados). "
+                     "Solo lectura.")
+        elif data['cerrada']:
             self.estado_label.configure(
                 text=f"Caja cerrada. Efectivo contado: ${data['efectivo_contado']:.2f} "
                      f"(diferencia: ${data['diferencia']:+.2f})")
         elif not data['es_hoy']:
-            if data['sin_datos']:
-                self.estado_label.configure(
-                    text="Ese día no se abrió la caja (no hay movimientos guardados). "
-                         "Solo lectura.")
-            else:
-                self.estado_label.configure(
-                    text="Estás viendo un día anterior. Solo lectura.")
+            self.estado_label.configure(
+                text="Este día quedó sin cerrar. Podés completarlo y cerrarlo desde acá.")
         else:
             self.estado_label.configure(text="")
 
@@ -477,3 +501,93 @@ class CajaForm(ttk.Frame):
             button_frame, text="Cancelar", bootstyle="secondary",
             command=dialog.destroy
         ).pack(side=RIGHT)
+
+    def show_editar_movimiento_dialog(self, movimiento, on_save) -> None:
+        """Doble clic en un movimiento: permite corregir su descripción,
+        monto y (si es un gasto) cómo se pagó, sin tener que borrarlo y
+        cargarlo de nuevo."""
+        dialog = ttk.Toplevel(self)
+        dialog.title("Editar movimiento")
+        dialog.geometry("380x320")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=BOTH, expand=True)
+
+        ttk.Label(
+            main_frame, text="Editar movimiento", font=("Segoe UI", 16, "bold")
+        ).pack(pady=(0, 15))
+
+        ttk.Label(
+            main_frame, text="Descripción:", font=("Segoe UI", 11)
+        ).pack(anchor=W)
+        descripcion_entry = ttk.Entry(main_frame, font=("Segoe UI", 11), width=30)
+        descripcion_entry.insert(0, movimiento['descripcion'])
+        descripcion_entry.pack(fill=X, pady=(0, 10))
+
+        ttk.Label(
+            main_frame, text="Monto:", font=("Segoe UI", 11)
+        ).pack(anchor=W)
+        monto_entry = ttk.Entry(main_frame, font=("Segoe UI", 11))
+        monto_entry.insert(0, f"{float(movimiento['monto']):.2f}")
+        monto_entry.pack(fill=X, pady=(0, 10))
+
+        forma = {'valor': movimiento['forma_pago'] or 'efectivo'}
+        if movimiento['tipo'] == 'gasto':
+            ttk.Label(
+                main_frame, text="¿Cómo se pagó?", font=("Segoe UI", 11)
+            ).pack(anchor=W, pady=(0, 5))
+            forma_row = ttk.Frame(main_frame)
+            forma_row.pack(fill=X, pady=(0, 10))
+            forma_buttons = {}
+
+            def elegir_forma(f):
+                forma['valor'] = f
+                for ff, b in forma_buttons.items():
+                    b.configure(bootstyle="primary" if ff == f else "secondary")
+
+            for f, label in (('efectivo', 'Efectivo (caja)'),
+                             ('transferencia', 'Transferencia')):
+                btn = ttk.Button(
+                    forma_row, text=label, width=15,
+                    bootstyle="primary" if f == forma['valor'] else "secondary",
+                    command=lambda f=f: elegir_forma(f))
+                btn.pack(side=LEFT, padx=(0, 5))
+                forma_buttons[f] = btn
+
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=X, pady=(15, 0))
+
+        def guardar(event=None):
+            try:
+                monto = float(monto_entry.get())
+                if monto <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Error", "Ingrese un monto válido")
+                return
+            descripcion = descripcion_entry.get().strip() or movimiento['descripcion']
+            dialog.destroy()
+            on_save(movimiento['id'], descripcion, monto, forma['valor'])
+            return "break"
+
+        ttk.Button(
+            button_frame, text="Guardar", bootstyle="success", command=guardar
+        ).pack(side=RIGHT, padx=(5, 0))
+        ttk.Button(
+            button_frame, text="Cancelar", bootstyle="secondary",
+            command=dialog.destroy
+        ).pack(side=RIGHT)
+
+        descripcion_entry.bind('<Return>', guardar)
+        monto_entry.bind('<Return>', guardar)
+
+        dialog.update_idletasks()
+        width, height = dialog.winfo_width(), dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+        descripcion_entry.focus()
+        descripcion_entry.select_range(0, 'end')

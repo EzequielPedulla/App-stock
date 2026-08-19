@@ -256,6 +256,18 @@ class Database:
             "SELECT * FROM caja_sesiones ORDER BY fecha DESC LIMIT 1")
         return result[0] if result else None
 
+    def get_caja_sesion_abierta_anterior(self, fecha_hoy: str):
+        """Devuelve la sesión sin cerrar más antigua de un día previo a
+        `fecha_hoy` (dict) o None. Sirve para avisar que quedó un día sin
+        cerrar la caja."""
+        result = self.execute_query(
+            """SELECT * FROM caja_sesiones
+               WHERE cerrada = 0 AND fecha < ?
+               ORDER BY fecha ASC LIMIT 1""",
+            (fecha_hoy,)
+        )
+        return result[0] if result else None
+
     def create_caja_sesion(self, fecha: str, fondo_inicial: float) -> int:
         self.cursor.execute(
             "INSERT INTO caja_sesiones (fecha, fondo_inicial) VALUES (?, ?)",
@@ -292,6 +304,16 @@ class Database:
         )
         self.connection.commit()
         return self.cursor.lastrowid
+
+    def update_caja_movimiento(self, movimiento_id: int, descripcion: str,
+                               monto: float, forma_pago: str) -> None:
+        self.cursor.execute(
+            """UPDATE caja_movimientos
+               SET descripcion = ?, monto = ?, forma_pago = ?
+               WHERE id = ?""",
+            (descripcion, monto, forma_pago, movimiento_id)
+        )
+        self.connection.commit()
 
     def get_caja_movimientos(self, sesion_id: int) -> list:
         return self.execute_query(
