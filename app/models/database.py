@@ -64,6 +64,29 @@ class Database:
             )
         ''')
 
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS caja_sesiones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fecha DATE NOT NULL UNIQUE,
+                fondo_inicial REAL NOT NULL DEFAULT 0,
+                efectivo_contado REAL NULL,
+                cerrada INTEGER NOT NULL DEFAULT 0,
+                cerrada_at DATETIME NULL
+            )
+        ''')
+
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS caja_movimientos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sesion_id INTEGER NOT NULL,
+                tipo VARCHAR(20) NOT NULL,
+                descripcion VARCHAR(200) NOT NULL,
+                monto REAL NOT NULL,
+                fecha DATETIME NOT NULL,
+                FOREIGN KEY (sesion_id) REFERENCES caja_sesiones(id)
+            )
+        ''')
+
         self._migrate_add_payment_method_column()
         self.connection.commit()
 
@@ -207,6 +230,84 @@ class Database:
             print(f"Error al anular venta: {e}")
             self.connection.rollback()
             return False
+
+    def get_caja_sesion_by_fecha(self, fecha: str):
+        """Devuelve la sesión de caja de un día (dict) o None si no existe."""
+        result = self.execute_query(
+            "SELECT * FROM caja_sesiones WHERE fecha = ?", (fecha,))
+        return result[0] if result else None
+
+    def get_last_caja_sesion(self):
+        """Devuelve la última sesión de caja registrada (dict) o None."""
+        result = self.execute_query(
+            "SELECT * FROM caja_sesiones ORDER BY fecha DESC LIMIT 1")
+        return result[0] if result else None
+
+    def create_caja_sesion(self, fecha: str, fondo_inicial: float) -> int:
+        self.cursor.execute(
+            "INSERT INTO caja_sesiones (fecha, fondo_inicial) VALUES (?, ?)",
+            (fecha, fondo_inicial)
+        )
+        self.connection.commit()
+        return self.cursor.lastrowid
+
+    def update_caja_fondo_inicial(self, sesion_id: int, fondo_inicial: float) -> None:
+        self.cursor.execute(
+            "UPDATE caja_sesiones SET fondo_inicial = ? WHERE id = ?",
+            (fondo_inicial, sesion_id)
+        )
+        self.connection.commit()
+
+    def cerrar_caja_sesion(self, sesion_id: int, efectivo_contado: float) -> None:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute(
+            """UPDATE caja_sesiones
+               SET efectivo_contado = ?, cerrada = 1, cerrada_at = ?
+               WHERE id = ?""",
+            (efectivo_contado, now, sesion_id)
+        )
+        self.connection.commit()
+
+    def add_caja_movimiento(self, sesion_id: int, tipo: str, descripcion: str,
+                            monto: float) -> int:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute(
+            """INSERT INTO caja_movimientos (sesion_id, tipo, descripcion, monto, fecha)
+               VALUES (?, ?, ?, ?, ?)""",
+            (sesion_id, tipo, descripcion, monto, now)
+        )
+        self.connection.commit()
+        return self.cursor.lastrowid
+
+    def get_caja_movimientos(self, sesion_id: int) -> list:
+        return self.execute_query(
+            "SELECT * FROM caja_movimientos WHERE sesion_id = ? ORDER BY id",
+            (sesion_id,)
+        )
+
+    def delete_caja_movimiento(self, movimiento_id: int) -> None:
+        self.cursor.execute(
+            "DELETE FROM caja_movimientos WHERE id = ?", (movimiento_id,))
+        self.connection.commit()
+
+    def get_ventas_totales_por_metodo(self, fecha: str) -> dict:
+        """Suma el total de ventas activas de un día, por método de pago.
+        Usa `total` (no `paid`): en efectivo es lo que efectivamente queda
+        en el cajón (lo que se recibe menos el vuelto que sale del mismo
+        cajón, neto = total); en fiado no entra nada de plata todavía.
+        """
+        result = self.execute_query(
+            """SELECT payment_method, COALESCE(SUM(total), 0) as total
+               FROM sales
+               WHERE status = 'active' AND date LIKE ?
+               GROUP BY payment_method""",
+            (f"{fecha}%",)
+        )
+        totales = {'efectivo': 0.0, 'transferencia': 0.0,
+                  'posnet': 0.0, 'fiado': 0.0}
+        for row in result:
+            totales[row['payment_method']] = float(row['total'])
+        return totales
 
     def __del__(self):
         # No cerrar la conexión en el destructor ya que es compartida
