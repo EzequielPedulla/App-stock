@@ -52,7 +52,8 @@ class CajaController:
         """Suma los movimientos del día, separando los gastos según cómo se
         pagaron: solo el gasto en efectivo sale de la caja física, uno
         pagado por transferencia (o directamente del bolsillo del dueño)
-        no la toca."""
+        no la toca. El ingreso es plata que el dueño mete a la caja sin
+        que sea una venta (ej. para tener cambio)."""
         gastos_efectivo = sum(
             float(m['monto']) for m in movimientos
             if m['tipo'] == 'gasto' and m['forma_pago'] == 'efectivo')
@@ -63,16 +64,20 @@ class CajaController:
             float(m['monto']) for m in movimientos if m['tipo'] == 'retiro')
         total_bolsillo = sum(
             float(m['monto']) for m in movimientos if m['tipo'] == 'bolsillo')
+        total_ingresos = sum(
+            float(m['monto']) for m in movimientos if m['tipo'] == 'ingreso')
         return {
             'gastos_efectivo': gastos_efectivo,
             'gastos_transferencia': gastos_transferencia,
             'total_retiros': total_retiros,
             'total_bolsillo': total_bolsillo,
+            'total_ingresos': total_ingresos,
         }
 
     def _calcular_efectivo_esperado(self, sesion, movimientos, ventas) -> float:
         totales = self._totales_movimientos(movimientos)
         return (float(sesion['fondo_inicial']) + ventas['efectivo']
+                + totales['total_ingresos']
                 - totales['gastos_efectivo'] - totales['total_retiros'])
 
     def _calcular_resultado_dia(self, movimientos, ventas) -> float:
@@ -116,6 +121,7 @@ class CajaController:
             'total_gastos_transferencia': totales['gastos_transferencia'],
             'total_retiros': totales['total_retiros'],
             'total_bolsillo': totales['total_bolsillo'],
+            'total_ingresos': totales['total_ingresos'],
             'efectivo_esperado': efectivo_esperado,
             'cerrada': cerrada,
             'efectivo_contado': efectivo_contado,
@@ -140,6 +146,8 @@ class CajaController:
             if data['tipo'] == 'retiro':
                 # El retiro no necesita explicación como un gasto puntual.
                 descripcion = 'Retiro'
+            elif data['tipo'] == 'ingreso':
+                descripcion = 'Ingreso'
             else:
                 messagebox.showerror("Error", "Ingrese una descripción")
                 return

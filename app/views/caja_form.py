@@ -59,7 +59,7 @@ class CajaForm(ttk.Frame):
         resumen_card.pack(fill=X, pady=(0, 15))
 
         ttk.Label(
-            resumen_card, text="Fondo y egresos del día",
+            resumen_card, text="Fondo, ingresos y egresos del día",
             font=("Segoe UI", 14, "bold")
         ).grid(row=0, column=0, columnspan=4, sticky=W, pady=(0, 15))
 
@@ -74,10 +74,11 @@ class CajaForm(ttk.Frame):
             fondo_frame, text="Guardar", width=9, bootstyle="secondary")
         self.guardar_fondo_button.pack(side=LEFT, padx=(5, 0))
 
-        self._resumen_label("Gastos en efectivo:", 1, 2, resumen_card, "label_total_gastos_efectivo")
-        self._resumen_label("Total Retiros:", 2, 0, resumen_card, "label_total_retiros")
+        self._resumen_label("Ingresos (plata que entró):", 1, 2, resumen_card, "label_total_ingresos")
+        self._resumen_label("Gastos en efectivo:", 2, 0, resumen_card, "label_total_gastos_efectivo")
         self._resumen_label("Gastos por transferencia:", 2, 2, resumen_card, "label_total_gastos_transferencia")
-        self._resumen_label("Bolsillo del dueño:", 3, 0, resumen_card, "label_total_bolsillo")
+        self._resumen_label("Total Retiros:", 3, 0, resumen_card, "label_total_retiros")
+        self._resumen_label("Bolsillo del dueño:", 3, 2, resumen_card, "label_total_bolsillo")
 
         ttk.Label(
             resumen_card, text="Transferencia y bolsillo no afectan el efectivo de la caja",
@@ -117,6 +118,7 @@ class CajaForm(ttk.Frame):
             ('gasto', 'Gasto (proveedor)'),
             ('retiro', 'Retiro'),
             ('bolsillo', 'Bolsillo del dueño'),
+            ('ingreso', 'Ingreso a la caja'),
         ):
             btn = ttk.Button(
                 tipo_row, text=label, width=18,
@@ -259,6 +261,7 @@ class CajaForm(ttk.Frame):
         etiquetas_tipo = {
             'retiro': 'Retiro',
             'bolsillo': 'Bolsillo',
+            'ingreso': 'Ingreso',
         }
         for i, mov in enumerate(movimientos):
             hora = str(mov['fecha'])[11:16] if len(str(mov['fecha'])) > 10 else ''
@@ -288,6 +291,7 @@ class CajaForm(ttk.Frame):
         self.label_total_gastos_transferencia.configure(text=f"${data['total_gastos_transferencia']:.2f}")
         self.label_total_retiros.configure(text=f"${data['total_retiros']:.2f}")
         self.label_total_bolsillo.configure(text=f"${data['total_bolsillo']:.2f}")
+        self.label_total_ingresos.configure(text=f"${data['total_ingresos']:.2f}")
         self.label_efectivo_esperado.configure(
             text=f"${data['efectivo_esperado']:.2f}",
             bootstyle="success" if data['efectivo_esperado'] >= 0 else "danger")
