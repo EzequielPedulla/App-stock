@@ -4,6 +4,7 @@ import tkinter as tk
 from .product_form import ProductForm
 from .product_list import ProductList
 from .sale_form import SaleForm
+from .caja_form import CajaForm
 from .report_form import ReportForm
 
 
@@ -83,6 +84,11 @@ class MainWindow(ttk.Window):
         self.sale_form = SaleForm(self.ventas_frame)
         self.sale_form.pack(fill=BOTH, expand=True)
 
+        # Frame para caja (solo se muestra cuando corresponde)
+        self.caja_frame = tk.Frame(self.contenido_interno, bg="white")
+        self.caja_form = CajaForm(self.caja_frame)
+        self.caja_form.pack(fill=BOTH, expand=True)
+
         self.reports_frame = tk.Frame(self.contenido_interno, bg="white")
 
         self.report_form = ReportForm(self.reports_frame)
@@ -95,6 +101,7 @@ class MainWindow(ttk.Window):
         buttons_data = [
             ("📦", "Productos", self.show_products),
             ("💰", "Ventas", self.show_sales),
+            ("🧮", "Caja", self.show_caja),
             ("📊", "Reportes", self.show_reports)
         ]
 
@@ -113,19 +120,32 @@ class MainWindow(ttk.Window):
     def show_products(self):
         """Muestra la sección de productos y actualiza el título."""
         self.ventas_frame.pack_forget()
-        self.reports_frame.pack_forget()  # <-- Agregar esta línea
+        self.caja_frame.pack_forget()
+        self.reports_frame.pack_forget()
         self.productos_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Productos")
 
     def show_sales(self):
         """Muestra la sección de ventas y actualiza el título."""
         self.productos_frame.pack_forget()
-        self.reports_frame.pack_forget()  # <-- Agregar esta línea
+        self.caja_frame.pack_forget()
+        self.reports_frame.pack_forget()
         self.ventas_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Ventas")
+
+    def show_caja(self):
+        """Muestra la sección de caja y actualiza el título."""
+        self.productos_frame.pack_forget()
+        self.ventas_frame.pack_forget()
+        self.reports_frame.pack_forget()
+        self.caja_frame.pack(fill=BOTH, expand=True)
+        self.titulo_label.config(text="Caja")
+        if getattr(self.caja_form, 'caja_controller', None):
+            self.caja_form.caja_controller.refresh()
 
     def show_reports(self):
         self.productos_frame.pack_forget()
         self.ventas_frame.pack_forget()
+        self.caja_frame.pack_forget()
         self.reports_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Reportes")
