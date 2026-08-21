@@ -3,8 +3,6 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-import os
-import platform
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -606,30 +604,3 @@ class ExportService:
         except Exception as e:
             print(f"Error al crear gráfico: {e}")
             return None
-
-    def print_pdf(self, filename: str) -> bool:
-        """
-        Envía un PDF a imprimir usando la impresora predeterminada del sistema.
-
-        Args:
-            filename: Ruta al archivo PDF a imprimir
-
-        Returns:
-            bool: True si se envió a imprimir correctamente, False si hubo error
-        """
-        try:
-            if platform.system() == 'Windows':
-                # Imprimir usando el verbo 'print' de Windows
-                os.startfile(filename, "print")
-                return True
-            elif platform.system() == 'Darwin':  # macOS
-                import subprocess
-                subprocess.run(['lpr', filename], check=True)
-                return True
-            else:  # Linux
-                import subprocess
-                subprocess.run(['lp', filename], check=True)
-                return True
-        except Exception as e:
-            print(f"Error al imprimir PDF: {e}")
-            return False

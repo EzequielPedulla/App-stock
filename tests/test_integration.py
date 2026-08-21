@@ -1,15 +1,10 @@
 """Pruebas de integración para la aplicación de gestión de stock."""
 from typing import TYPE_CHECKING
 
-import pytest
-
 if TYPE_CHECKING:
-    from _pytest.fixtures import FixtureRequest
-    from _pytest.monkeypatch import MonkeyPatch
     from pytest_mock.plugin import MockerFixture
     from app.views.main_window import MainWindow
     from app.controllers.product_controller import ProductController
-    from app.controllers.sale_controller import SaleController
 
 
 def test_product_controller_integration(
@@ -35,14 +30,6 @@ def test_product_controller_integration(
 
     # Verificar que el controlador está correctamente inicializado
     assert product_controller is not None
-
-    # Simular la adición de un producto
-    mock_product = {
-        'barcode': '123456789012',
-        'name': 'Producto Test',
-        'price': '100.0',
-        'stock': '10'
-    }
 
     # Simular el método de guardar producto
     mocker.patch.object(

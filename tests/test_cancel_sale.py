@@ -1,7 +1,6 @@
 """Tests para la funcionalidad de anulación de ventas."""
 
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
 import pytest
 from app.models.database import Database
 from app.models.product import Product
@@ -48,7 +47,7 @@ class TestCancelSale:
         mocker.patch.object(db, 'get_product_by_id', return_value=mock_product)
 
         # Mock de update_product
-        mock_update = mocker.patch.object(db, 'update_product')
+        mocker.patch.object(db, 'update_product')
 
         # Mock de cursor y commit (se reemplaza el atributo completo: un
         # sqlite3.Cursor real no permite parchear métodos individuales)

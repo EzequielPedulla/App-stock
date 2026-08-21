@@ -3,21 +3,21 @@
 > **Aplicación de escritorio completa desarrollada en Python** para la gestión integral de inventario, ventas y reportes empresariales.
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
-[![Tests](https://img.shields.io/badge/Tests-20%20passed-28a745?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
+[![Tests](https://img.shields.io/badge/Tests-17%20passed-28a745?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
 
 ## 🎯 **Descripción del Proyecto**
 
-**App-Stock** es una solución empresarial completa que demuestra mis habilidades en desarrollo de software de escritorio, arquitectura de aplicaciones y gestión de bases de datos. El sistema permite a los negocios gestionar su inventario, procesar ventas y generar reportes profesionales de manera eficiente.
+**App-Stock** es una aplicación de escritorio para la gestión de inventario, ventas y caja diaria de un comercio de barrio. Nació como proyecto de portfolio y hoy está en uso real: permite cargar productos, vender con varios métodos de pago (incluido fiado), llevar la caja del día a día y generar reportes.
 
 ### **¿Por qué este proyecto?**
 
 - ✅ **Arquitectura MVC** - Separación clara de responsabilidades
-- ✅ **Base de datos relacional** - Diseño optimizado con MySQL
-- ✅ **Interfaz moderna** - UI profesional con ttkbootstrap
+- ✅ **Base de datos embebida** - SQLite, sin servidor ni instalación adicional
+- ✅ **Interfaz moderna y adaptable** - UI con ttkbootstrap, usable en monitores chicos
 - ✅ **Testing completo** - Suite de pruebas con pytest
 - ✅ **Distribución** - Instalador automático para usuarios finales
 
@@ -30,10 +30,10 @@
 **Descarga e instala en 3 pasos:**
 
 1. **Descargar instalador** desde [Releases](https://github.com/EzequielPedulla/App-stock/releases)
-2. **Ejecutar como administrador** el archivo `App-Stock-Installer-v1.0.exe`
-3. **¡Listo!** La aplicación se abre automáticamente con base de datos configurada
+2. **Ejecutar como administrador** el archivo `App-Stock-Installer.exe`
+3. **¡Listo!** La aplicación se abre automáticamente, sin base de datos que configurar
 
-> ⚡ **Instalación automática** - Incluye MySQL, dependencias y configuración completa
+> ⚡ **Instalación automática** - App-Stock usa SQLite: crea su propio archivo de datos la primera vez que se abre, no requiere instalar ni configurar nada aparte
 
 ### **👨‍💻 Para Desarrolladores**
 
@@ -49,10 +49,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # Instalar dependencias
 pip install -r requirements.txt
 
-# Configurar base de datos (opcional - usar SQLite para desarrollo)
-# Crear archivo .env con configuración MySQL
-
-# Ejecutar aplicación
+# Ejecutar aplicación (no requiere configuración adicional)
 python main.py
 ```
 
@@ -61,7 +58,7 @@ python main.py
 - **Windows 10/11** (instalador) o **Python 3.11+** (desarrollo)
 - **4 GB RAM** mínimo
 - **500 MB** espacio en disco
-- **MySQL 8.0+** (incluido en instalador)
+- Sin conexión a internet ni base de datos externa
 
 ---
 
@@ -69,11 +66,11 @@ python main.py
 
 | **Categoría**     | **Tecnologías**                               |
 | ----------------- | --------------------------------------------- |
-| **Backend**       | Python 3.11+, PyMySQL, python-dotenv          |
+| **Backend**       | Python 3.11+, sqlite3 (stdlib)                |
 | **Frontend**      | tkinter, ttkbootstrap (UI moderna)            |
-| **Base de Datos** | MySQL 8.0+                                    |
+| **Base de Datos** | SQLite                                        |
 | **Reportes**      | ReportLab (PDF), OpenPyXL (Excel), Matplotlib |
-| **Testing**       | pytest, pytest-cov, pytest-mock               |
+| **Testing**       | pytest, pytest-cov, pytest-mock, ruff         |
 | **Distribución**  | PyInstaller, Inno Setup                       |
 
 ---
@@ -83,15 +80,23 @@ python main.py
 ### **🛍️ Gestión de Inventario**
 
 - CRUD completo de productos con código de barras
-- Control automático de stock con alertas
-- Búsqueda avanzada y filtros
+- Stock informativo (no bloquea una venta si no está cargado)
+- Búsqueda por código de barras o por nombre
 
 ### **💰 Sistema de Ventas**
 
-- Carrito de compras intuitivo
-- Cálculo automático de totales e impuestos
-- Generación de tickets en PDF
+- Hasta 3 ventas en curso a la vez (varios clientes en el mostrador)
+- Cálculo automático de totales
+- Método de pago: efectivo, transferencia, posnet o fiado (no pago)
 - Artículos "Varios" para productos no registrados
+- Generación de tickets en PDF (manual, desde Reportes)
+
+### **🧮 Caja**
+
+- Registro diario de fondo inicial, gastos (por forma de pago), retiros e ingresos
+- "Resultado de hoy": total vendido menos gastos y retiros
+- Cierre de caja con conteo de efectivo y diferencia
+- Navegación a días anteriores para consultarlos o terminar de cerrarlos
 
 ### **📊 Reportes y Análisis**
 
@@ -117,9 +122,10 @@ App-Stock/
 │   ├── controllers/     # Lógica de negocio (MVC)
 │   │   ├── product_controller.py
 │   │   ├── sale_controller.py
+│   │   ├── caja_controller.py
 │   │   └── report_controller.py
 │   ├── models/          # Modelos de datos
-│   │   ├── database.py
+│   │   ├── database.py  # SQLite
 │   │   └── product.py
 │   ├── services/        # Servicios (exportación)
 │   │   └── export_service.py
@@ -127,7 +133,9 @@ App-Stock/
 │       ├── main_window.py
 │       ├── product_form.py
 │       ├── sale_form.py
-│       └── report_form.py
+│       ├── caja_form.py
+│       ├── report_form.py
+│       └── scrollable_frame.py
 ├── tests/               # Suite de pruebas
 ├── docs/                # Documentación
 └── main.py              # Punto de entrada
@@ -156,7 +164,7 @@ pytest tests/test_export_service.py -v
 pytest tests/test_cancel_sale.py -v
 ```
 
-**Cobertura de tests:** 20+ tests que cubren:
+**Cobertura de tests:** 17 tests que cubren:
 
 - ✅ Funcionalidades de exportación
 - ✅ Cancelación de ventas
@@ -191,7 +199,7 @@ _Generación de reportes con gráficos y exportación a PDF/Excel_
 - **Python Avanzado** - POO, decoradores, context managers
 - **Bases de Datos** - Diseño relacional, consultas optimizadas, transacciones
 - **Arquitectura de Software** - Patrones MVC, Repository, Service Layer
-- **APIs y Servicios** - Manejo de dependencias, configuración con .env
+- **APIs y Servicios** - Manejo de dependencias, configuración por variables de entorno
 
 ### **🎨 Desarrollo Frontend**
 

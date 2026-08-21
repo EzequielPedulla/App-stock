@@ -1,13 +1,8 @@
 """Tests para el servicio de exportación."""
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 import pytest
 from app.services.export_service import ExportService
-
-if TYPE_CHECKING:
-    from _pytest.fixtures import FixtureRequest
-    from pytest_mock.plugin import MockerFixture
 
 
 @pytest.fixture

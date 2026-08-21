@@ -22,14 +22,20 @@ primera vez que se abre.
 
 ✅ GESTION DE PRODUCTOS
    - Agregar, editar, eliminar productos
-   - Control de stock automatico
-   - Busqueda por codigo de barras
+   - El stock es informativo: no bloquea una venta si falta cargarlo
+   - Busqueda por codigo de barras o por nombre
 
 ✅ SISTEMA DE VENTAS
-   - Carrito de compras intuitivo
+   - Carrito de compras intuitivo, hasta 3 ventas a la vez
    - Calculo automatico de totales
-   - Tickets de venta en PDF
-   - Impresion directa
+   - Metodo de pago: efectivo, transferencia, posnet o fiado (no pago)
+   - Tickets de venta en PDF, generables a mano desde Reportes
+
+✅ CAJA
+   - Registro diario de fondo inicial, gastos, retiros e ingresos
+   - "Resultado de hoy": total vendido menos gastos y retiros
+   - Cierre de caja con conteo de efectivo y diferencia
+   - Se puede revisar (y terminar de cerrar) dias anteriores
 
 ✅ REPORTES PROFESIONALES
    - Exportacion a PDF y Excel

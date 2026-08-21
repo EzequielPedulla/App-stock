@@ -1,15 +1,8 @@
 """Configuración compartida para las pruebas de integración."""
-from typing import TYPE_CHECKING, Generator
-
 import pytest
 from app.views.main_window import MainWindow
 from app.controllers.product_controller import ProductController
 from app.controllers.sale_controller import SaleController
-
-if TYPE_CHECKING:
-    from _pytest.fixtures import FixtureRequest
-    from _pytest.monkeypatch import MonkeyPatch
-    from pytest_mock.plugin import MockerFixture
 
 
 @pytest.fixture
