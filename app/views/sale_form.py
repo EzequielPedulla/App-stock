@@ -132,10 +132,10 @@ class SaleForm(ttk.Frame):
             "Custom.Treeview",
             background="white",
             foreground="black",
-            rowheight=35,
+            rowheight=42,
             fieldbackground="white",
             borderwidth=1,
-            font=('Segoe UI', 11)
+            font=('Segoe UI', 12)
         )
 
         # Estilo para los encabezados
@@ -145,7 +145,7 @@ class SaleForm(ttk.Frame):
             foreground="white",
             relief="flat",
             borderwidth=1,
-            font=('Segoe UI', 12, 'bold')
+            font=('Segoe UI', 13, 'bold')
         )
 
         # Estilo para la selección
@@ -161,7 +161,7 @@ class SaleForm(ttk.Frame):
             table_frame,
             columns=columns,
             show="headings",
-            height=3,
+            height=6,
             style="Custom.Treeview"
         )
 
