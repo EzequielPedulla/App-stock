@@ -11,7 +11,7 @@ class ProductForm(ttk.Frame):
     def _create_widgets(self):
         # Título del formulario
         self.title_label = ttk.Label(self, text="Agregar Producto",
-                                     font=("Segoe UI", 16, "bold"))
+                                     font=("Segoe UI", 18, "bold"))
         self.title_label.grid(row=0, column=0, columnspan=2,
                               pady=(0, 20), sticky='w')
 
@@ -20,22 +20,22 @@ class ProductForm(ttk.Frame):
 
         # Campos del formulario
         ttk.Label(self, text="Código de barras",
-                  font=("Segoe UI", 11)).grid(row=1, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 13)).grid(row=1, column=0, pady=10, sticky='w')
         self.barcode_entry = ttk.Entry(self)
         self.barcode_entry.grid(row=1, column=1, padx=(20, 0), sticky='ew')
 
         ttk.Label(self, text="Nombre",
-                  font=("Segoe UI", 11)).grid(row=2, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 13)).grid(row=2, column=0, pady=10, sticky='w')
         self.name_entry = ttk.Entry(self)
         self.name_entry.grid(row=2, column=1, padx=(20, 0), sticky='ew')
 
         ttk.Label(self, text="Precio",
-                  font=("Segoe UI", 11)).grid(row=3, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 13)).grid(row=3, column=0, pady=10, sticky='w')
         self.price_entry = ttk.Entry(self, width=15)
         self.price_entry.grid(row=3, column=1, padx=(20, 0), sticky='w')
 
         ttk.Label(self, text="Stock",
-                  font=("Segoe UI", 11)).grid(row=4, column=0, pady=10, sticky='w')
+                  font=("Segoe UI", 13)).grid(row=4, column=0, pady=10, sticky='w')
         self.stock_entry = ttk.Entry(self, width=15)
         self.stock_entry.grid(row=4, column=1, padx=(20, 0), sticky='w')
 

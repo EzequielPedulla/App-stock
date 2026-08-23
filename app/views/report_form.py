@@ -21,7 +21,7 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             header_frame,
             text="Reportes",
-            font=("Segoe UI", 24, "bold")
+            font=("Segoe UI", 27, "bold")
         ).pack(side=LEFT, anchor=W)
 
         # Frame para botones de exportación
@@ -66,13 +66,13 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             card_total,
             text="Total de ventas",
-            font=("Segoe UI", 12)
+            font=("Segoe UI", 14)
         ).pack(anchor=W)
 
         self.label_total_ventas = ttk.Label(
             card_total,
             text="$0",
-            font=("Segoe UI", 28, "bold"),
+            font=("Segoe UI", 31, "bold"),
             bootstyle="success"
         )
         self.label_total_ventas.pack(anchor=W, pady=(10, 0))
@@ -84,13 +84,13 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             card_ultima,
             text="Última venta",
-            font=("Segoe UI", 12)
+            font=("Segoe UI", 14)
         ).pack(anchor=W)
 
         self.label_ultima_venta = ttk.Label(
             card_ultima,
             text="$0",
-            font=("Segoe UI", 28, "bold"),
+            font=("Segoe UI", 31, "bold"),
             bootstyle="info"
         )
         self.label_ultima_venta.pack(anchor=W, pady=(10, 0))
@@ -109,7 +109,7 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             card_grafico,
             text="Productos más vendidos",
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 16, "bold")
         ).pack(anchor=W, pady=(0, 15))
 
         # Frame para el gráfico
@@ -123,19 +123,19 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             card_tabla,
             text="Historial de ventas",
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 16, "bold")
         ).pack(anchor=W, pady=(0, 15))
 
         # Configurar estilo para la tabla de ventas
         style = ttk.Style()
         style.configure(
             "Ventas.Treeview",
-            rowheight=35,
-            font=('Segoe UI', 11)
+            rowheight=40,
+            font=('Segoe UI', 13)
         )
         style.configure(
             "Ventas.Treeview.Heading",
-            font=('Segoe UI', 12, 'bold')
+            font=('Segoe UI', 14, 'bold')
         )
 
         # Frame para la tabla con scrollbar
@@ -159,8 +159,8 @@ class ReportForm(ttk.Frame):
         self.tabla_ventas.heading("fecha", text="Fecha", anchor=W)
         self.tabla_ventas.heading("total", text="Total", anchor=E)
 
-        self.tabla_ventas.column("fecha", width=150, anchor=W)
-        self.tabla_ventas.column("total", width=100, anchor=E)
+        self.tabla_ventas.column("fecha", width=170, anchor=W)
+        self.tabla_ventas.column("total", width=110, anchor=E)
 
         # Colores alternados
         self.tabla_ventas.tag_configure('evenrow', background='#ecf0f1')
@@ -222,7 +222,7 @@ class ReportForm(ttk.Frame):
         # Crear ventana modal
         detail_window = ttk.Toplevel(self)
         detail_window.title(f"Detalle de Venta N° {sale_id}")
-        detail_window.geometry("800x600")
+        detail_window.geometry("940x720")
         detail_window.resizable(False, False)
         detail_window.transient(self)
         detail_window.grab_set()
@@ -246,32 +246,32 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             header_frame,
             text=f"Venta N° {sale_id}",
-            font=("Segoe UI", 20, "bold")
+            font=("Segoe UI", 23, "bold")
         ).pack(side=LEFT)
 
         ttk.Label(
             header_frame,
             text=f"Fecha: {sale_date}",
-            font=("Segoe UI", 12)
+            font=("Segoe UI", 14)
         ).pack(side=RIGHT)
 
         # Tabla de productos
         ttk.Label(
             main_frame,
             text="Productos",
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 16, "bold")
         ).pack(anchor=W, pady=(0, 10))
 
         # Estilo para la tabla de detalles
         style = ttk.Style()
         style.configure(
             "Details.Treeview",
-            rowheight=35,
-            font=('Segoe UI', 11)
+            rowheight=40,
+            font=('Segoe UI', 13)
         )
         style.configure(
             "Details.Treeview.Heading",
-            font=('Segoe UI', 12, 'bold')
+            font=('Segoe UI', 14, 'bold')
         )
 
         # Crear tabla
@@ -289,10 +289,10 @@ class ReportForm(ttk.Frame):
         tree.heading("precio", text="Precio", anchor=E)
         tree.heading("subtotal", text="Subtotal", anchor=E)
 
-        tree.column("producto", width=350, anchor=W)
-        tree.column("cantidad", width=120, anchor=CENTER)
-        tree.column("precio", width=130, anchor=E)
-        tree.column("subtotal", width=130, anchor=E)
+        tree.column("producto", width=400, anchor=W)
+        tree.column("cantidad", width=140, anchor=CENTER)
+        tree.column("precio", width=150, anchor=E)
+        tree.column("subtotal", width=150, anchor=E)
 
         # Insertar productos
         for i, detail in enumerate(details):
@@ -324,13 +324,13 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             total_frame,
             text="Total de la venta:",
-            font=("Segoe UI", 14)
+            font=("Segoe UI", 16)
         ).pack(side=LEFT)
 
         ttk.Label(
             total_frame,
             text=f"${sale_total:,.2f}",
-            font=("Segoe UI", 22, "bold"),
+            font=("Segoe UI", 25, "bold"),
             bootstyle="success"
         ).pack(side=RIGHT, padx=(20, 0))
 
@@ -383,7 +383,7 @@ class ReportForm(ttk.Frame):
                 ttk.Label(
                     self.grafico_frame,
                     text="📊 No hay datos de ventas aún",
-                    font=("Segoe UI", 11),
+                    font=("Segoe UI", 13),
                     foreground="gray"
                 ).place(relx=0.5, rely=0.5, anchor=CENTER)
                 return
@@ -459,7 +459,7 @@ class ReportForm(ttk.Frame):
             ttk.Label(
                 self.grafico_frame,
                 text=f"❌ Error al crear gráfico\n{str(e)}",
-                font=("Segoe UI", 10),
+                font=("Segoe UI", 11),
                 foreground="red"
             ).place(relx=0.5, rely=0.5, anchor=CENTER)
 

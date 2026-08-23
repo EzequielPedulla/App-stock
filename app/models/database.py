@@ -65,6 +65,16 @@ class Database:
         ''')
 
         self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sale_payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sale_id INTEGER NOT NULL,
+                payment_method VARCHAR(20) NOT NULL,
+                amount REAL NOT NULL,
+                FOREIGN KEY (sale_id) REFERENCES sales(id)
+            )
+        ''')
+
+        self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS caja_sesiones (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 fecha DATE NOT NULL UNIQUE,
@@ -153,15 +163,29 @@ class Database:
         return Product.from_db_dict(dict(row)) if row else None
 
     def add_sale(self, date: str, total: float, paid: float, change: float,
-                 payment_method: str = 'efectivo', commit=True) -> int:
+                 payment_method: str = 'efectivo', payments: list = None,
+                 commit=True) -> int:
+        """Registra una venta. `payments` es opcional y sirve para ventas
+        pagadas con más de un método a la vez (ej. parte efectivo, parte
+        transferencia): una lista de {'method': str, 'amount': float}. En
+        ese caso `payment_method` debe ser 'mixto', y el detalle de cada
+        pago se guarda aparte en sale_payments."""
         self.cursor.execute(
             '''INSERT INTO sales (date, total, paid, `change`, payment_method)
                VALUES (?, ?, ?, ?, ?)''',
             (date, total, paid, change, payment_method)
         )
+        sale_id = self.cursor.lastrowid
+        if payments:
+            for p in payments:
+                self.cursor.execute(
+                    '''INSERT INTO sale_payments (sale_id, payment_method, amount)
+                       VALUES (?, ?, ?)''',
+                    (sale_id, p['method'], p['amount'])
+                )
         if commit:
             self.connection.commit()
-        return self.cursor.lastrowid
+        return sale_id
 
     def add_sale_detail(self, sale_id: int, product_id: int, quantity: int, unit_price: float, commit=True) -> None:
         self.cursor.execute(
@@ -331,18 +355,36 @@ class Database:
         Usa `total` (no `paid`): en efectivo es lo que efectivamente queda
         en el cajón (lo que se recibe menos el vuelto que sale del mismo
         cajón, neto = total); en fiado no entra nada de plata todavía.
+
+        Las ventas con un solo método se suman directo desde `sales`. Las
+        ventas con pago dividido ('mixto') se suman desde sale_payments,
+        que guarda cuánto se pagó con cada método.
         """
+        totales = {'efectivo': 0.0, 'transferencia': 0.0,
+                  'posnet': 0.0, 'fiado': 0.0}
+
         result = self.execute_query(
             """SELECT payment_method, COALESCE(SUM(total), 0) as total
                FROM sales
-               WHERE status = 'active' AND date LIKE ?
+               WHERE status = 'active' AND date LIKE ? AND payment_method != 'mixto'
                GROUP BY payment_method""",
             (f"{fecha}%",)
         )
-        totales = {'efectivo': 0.0, 'transferencia': 0.0,
-                  'posnet': 0.0, 'fiado': 0.0}
         for row in result:
             totales[row['payment_method']] = float(row['total'])
+
+        divididos = self.execute_query(
+            """SELECT sp.payment_method, COALESCE(SUM(sp.amount), 0) as total
+               FROM sale_payments sp
+               JOIN sales s ON s.id = sp.sale_id
+               WHERE s.status = 'active' AND s.date LIKE ?
+               GROUP BY sp.payment_method""",
+            (f"{fecha}%",)
+        )
+        for row in divididos:
+            metodo = row['payment_method']
+            totales[metodo] = totales.get(metodo, 0.0) + float(row['total'])
+
         return totales
 
     def __del__(self):

@@ -17,7 +17,7 @@ class SaleForm(ttk.Frame):
     def _create_widgets(self):
         # Título grande
         title_label = ttk.Label(self, text="Ventas",
-                                font=("Segoe UI", 24, "bold"))
+                                font=("Segoe UI", 27, "bold"))
         title_label.pack(anchor=tk.W, pady=(0, 10))
 
         # Pestañas de venta: para poder cobrarle a varias personas a la vez
@@ -37,16 +37,16 @@ class SaleForm(ttk.Frame):
 
         # Subtítulo
         sub_label = ttk.Label(card, text="Registrar Venta",
-                              font=("Segoe UI", 16, "bold"))
+                              font=("Segoe UI", 18, "bold"))
         sub_label.grid(row=0, column=0, columnspan=3,
                        sticky=tk.W, pady=(0, 10))
 
         # Código de barras
         barcode_label = ttk.Label(card, text="Código de barras",
-                                  font=("Segoe UI", 11))
+                                  font=("Segoe UI", 13))
         barcode_label.grid(row=1, column=0, sticky=tk.W, pady=(0, 5))
 
-        self.barcode_entry = ttk.Entry(card, font=("Segoe UI", 12))
+        self.barcode_entry = ttk.Entry(card, font=("Segoe UI", 14))
         self.barcode_entry.bind("<Return>", self._on_barcode_return)
         self.barcode_entry.bind("<Escape>", self._on_escape_pressed)
         self.barcode_entry.grid(
@@ -54,10 +54,10 @@ class SaleForm(ttk.Frame):
 
         # Cantidad
         qty_label = ttk.Label(card, text="Cantidad",
-                              font=("Segoe UI", 11))
+                              font=("Segoe UI", 13))
         qty_label.grid(row=1, column=1, sticky=tk.W, pady=(0, 5))
 
-        self.qty_entry = ttk.Entry(card, font=("Segoe UI", 12), width=8)
+        self.qty_entry = ttk.Entry(card, font=("Segoe UI", 14), width=8)
         self.qty_entry.bind("<Escape>", self._on_escape_pressed)
         self.qty_entry.grid(row=2, column=1, sticky=tk.W,
                             pady=(0, 10), padx=(0, 10))
@@ -73,6 +73,14 @@ class SaleForm(ttk.Frame):
             card, text="➕ Varios", bootstyle="info", width=15,
             command=self._show_varios_dialog)
         self.varios_button.grid(row=3, column=2, sticky=tk.E,
+                                padx=(10, 0), pady=5)
+
+        # Botón Buscar: para agregar un producto por nombre cuando no se
+        # tiene el código de barras a mano (ej. sin lector, o para ubicar
+        # varios productos rápido).
+        self.search_button = ttk.Button(
+            card, text="🔍 Buscar", bootstyle="secondary", width=15)
+        self.search_button.grid(row=3, column=3, sticky=tk.E,
                                 padx=(10, 0), pady=5)
 
         self.edit_button = ttk.Button(
@@ -92,7 +100,7 @@ class SaleForm(ttk.Frame):
 
         # Productos seleccionados
         prod_sel_label = ttk.Label(
-            self, text="Productos Seleccionados", font=("Segoe UI", 14, "bold"))
+            self, text="Productos Seleccionados", font=("Segoe UI", 16, "bold"))
         prod_sel_label.pack(anchor=tk.W, pady=(10, 0))
 
         # ===== FRAME DE BÚSQUEDA =====
@@ -100,13 +108,13 @@ class SaleForm(ttk.Frame):
         search_frame.pack(fill='x', pady=(10, 10))
 
         ttk.Label(search_frame, text="🔍 Buscar en carrito:",
-                  font=("Segoe UI", 11)).pack(side='left', padx=(0, 10))
+                  font=("Segoe UI", 13)).pack(side='left', padx=(0, 10))
 
         self.search_var = ttk.StringVar()
         self.search_var.trace('w', self._on_search)
 
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var,
-                                 font=("Segoe UI", 11), width=40)
+                                 font=("Segoe UI", 13), width=40)
         search_entry.pack(side='left', fill='x', expand=True)
 
         # Botón para limpiar búsqueda
@@ -117,7 +125,7 @@ class SaleForm(ttk.Frame):
 
         # Label informativo
         self.info_label = ttk.Label(search_frame, text="",
-                                    font=("Segoe UI", 9), foreground="gray")
+                                    font=("Segoe UI", 10), foreground="gray")
         self.info_label.pack(side='left', padx=(10, 0))
 
         # Frame para la tabla
@@ -132,10 +140,10 @@ class SaleForm(ttk.Frame):
             "Custom.Treeview",
             background="white",
             foreground="black",
-            rowheight=42,
+            rowheight=48,
             fieldbackground="white",
             borderwidth=1,
-            font=('Segoe UI', 12)
+            font=('Segoe UI', 14)
         )
 
         # Estilo para los encabezados
@@ -145,7 +153,7 @@ class SaleForm(ttk.Frame):
             foreground="white",
             relief="flat",
             borderwidth=1,
-            font=('Segoe UI', 13, 'bold')
+            font=('Segoe UI', 15, 'bold')
         )
 
         # Estilo para la selección
@@ -173,11 +181,11 @@ class SaleForm(ttk.Frame):
         self.tree.heading("subtotal", text="Subtotal", anchor="center")
 
         # Configurar el ancho y alineación de las columnas
-        self.tree.column("barcode", width=180, anchor="center", minwidth=180)
-        self.tree.column("name", width=250, anchor="center", minwidth=250)
-        self.tree.column("qty", width=120, anchor="center", minwidth=120)
-        self.tree.column("price", width=120, anchor="center", minwidth=120)
-        self.tree.column("subtotal", width=120, anchor="center", minwidth=120)
+        self.tree.column("barcode", width=210, anchor="center", minwidth=210)
+        self.tree.column("name", width=290, anchor="center", minwidth=290)
+        self.tree.column("qty", width=140, anchor="center", minwidth=140)
+        self.tree.column("price", width=140, anchor="center", minwidth=140)
+        self.tree.column("subtotal", width=140, anchor="center", minwidth=140)
 
         # Agregar scrollbar
         scrollbar = ttk.Scrollbar(
@@ -196,7 +204,7 @@ class SaleForm(ttk.Frame):
         self.count_label = ttk.Label(
             bottom_frame,
             text="0 productos",
-            font=("Segoe UI", 12),
+            font=("Segoe UI", 14),
             foreground="gray"
         )
         self.count_label.pack(side=tk.LEFT)
@@ -209,7 +217,7 @@ class SaleForm(ttk.Frame):
         self.total_label = ttk.Label(
             total_frame,
             text="Total: $0.00",
-            font=("Segoe UI", 18, "bold"),
+            font=("Segoe UI", 20, "bold"),
             anchor=tk.E,
             width=15
         )
@@ -330,7 +338,7 @@ class SaleForm(ttk.Frame):
         # Crear ventana modal
         self._payment_dialog = ttk.Toplevel(self)
         self._payment_dialog.title("Pago")
-        self._payment_dialog.geometry("400x400")
+        self._payment_dialog.geometry("470x580")
         self._payment_dialog.resizable(False, False)
         self._payment_dialog.transient(self)
         self._payment_dialog.grab_set()
@@ -347,11 +355,17 @@ class SaleForm(ttk.Frame):
         main_frame = ttk.Frame(self._payment_dialog, padding=20)
         main_frame.pack(fill=BOTH, expand=True)
 
+        # Botones de confirmar/cancelar: se anclan abajo del todo primero
+        # (side=BOTTOM), así el resto del contenido se puede armar y
+        # reordenar arriba sin depender de que este frame ya esté packeado.
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(side=BOTTOM, fill=X, pady=(10, 0))
+
         # Título
         ttk.Label(
             main_frame,
             text="Pago",
-            font=("Segoe UI", 16, "bold")
+            font=("Segoe UI", 18, "bold")
         ).pack(pady=(0, 20))
 
         # Obtener el total actual
@@ -362,16 +376,17 @@ class SaleForm(ttk.Frame):
         ttk.Label(
             main_frame,
             text=f"Total a pagar: ${total:.2f}",
-            font=("Segoe UI", 12)
+            font=("Segoe UI", 14)
         ).pack(pady=(0, 10))
 
         # Método de pago (por defecto Efectivo)
         self.payment_method = 'efectivo'
+        self.payments = None
 
         ttk.Label(
             main_frame,
             text="Método de pago:",
-            font=("Segoe UI", 11)
+            font=("Segoe UI", 13)
         ).pack(anchor=W, pady=(0, 5))
 
         method_row = ttk.Frame(main_frame)
@@ -385,6 +400,7 @@ class SaleForm(ttk.Frame):
             ('transferencia', 'Transferencia'),
             ('posnet', 'Posnet'),
             ('fiado', 'No pago (fiado)'),
+            ('mixto', 'Efectivo + Transferencia'),
         )):
             row, col = divmod(i, 2)
             btn = ttk.Button(
@@ -392,34 +408,60 @@ class SaleForm(ttk.Frame):
                 bootstyle="primary" if method == 'efectivo' else "secondary",
                 command=lambda m=method: select_method(m)
             )
-            btn.grid(row=row, column=col, padx=(0, 5), pady=(0, 5), sticky='ew')
+            if method == 'mixto':
+                btn.grid(row=row, column=0, columnspan=2,
+                         padx=(0, 5), pady=(0, 5), sticky='ew')
+            else:
+                btn.grid(row=row, column=col, padx=(0, 5), pady=(0, 5), sticky='ew')
             method_buttons[method] = btn
 
-        # Frame para el monto pagado
+        # Frame para el monto pagado (un solo método)
         payment_frame = ttk.Frame(main_frame)
         payment_frame.pack(fill=X, pady=(0, 10))
 
-        ttk.Label(
+        payment_label = ttk.Label(
             payment_frame,
             text="Monto pagado:",
-            font=("Segoe UI", 11)
-        ).pack(side=LEFT)
+            font=("Segoe UI", 13)
+        )
+        payment_label.pack(side=LEFT)
 
-        payment_entry = ttk.Entry(payment_frame, font=("Segoe UI", 12))
+        payment_entry = ttk.Entry(payment_frame, font=("Segoe UI", 14))
         payment_entry.pack(side=LEFT, padx=(10, 0), fill=X, expand=True)
         payment_entry.focus()
 
-        # Label para mostrar el vuelto
+        # Frame para pago mixto (efectivo + transferencia)
+        mixto_frame = ttk.Frame(main_frame)
+
+        ttk.Label(
+            mixto_frame, text="Efectivo:", font=("Segoe UI", 13)
+        ).pack(anchor=W)
+        efectivo_entry = ttk.Entry(mixto_frame, font=("Segoe UI", 14))
+        efectivo_entry.pack(fill=X, pady=(0, 8))
+
+        ttk.Label(
+            mixto_frame, text="Transferencia:", font=("Segoe UI", 13)
+        ).pack(anchor=W)
+        transferencia_entry = ttk.Entry(mixto_frame, font=("Segoe UI", 14))
+        transferencia_entry.pack(fill=X, pady=(0, 8))
+
+        # Label para mostrar el vuelto / estado del pago (compartido)
         change_label = ttk.Label(
             main_frame,
             text="Vuelto: $0.00",
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 16, "bold")
         )
-        change_label.pack(pady=(10, 20))
+        change_label.pack(pady=(10, 0))
 
         def calculate_change():
+            paid_str = payment_entry.get().strip()
+            # En efectivo, dejarlo vacío equivale a pagar justo (sin
+            # vuelto): no hace falta tipear el total a mano.
+            if self.payment_method == 'efectivo' and not paid_str:
+                change_label.configure(text="Vuelto: $0.00 (pago exacto)")
+                return
             try:
-                paid = float(payment_entry.get() or 0)
+                paid = float(paid_str or 0)
                 change = paid - total
                 if change >= 0:
                     change_label.configure(text=f"Vuelto: ${change:.2f}")
@@ -428,46 +470,116 @@ class SaleForm(ttk.Frame):
             except ValueError:
                 change_label.configure(text="Monto inválido")
 
+        def calculate_mixto():
+            try:
+                e = float(efectivo_entry.get() or 0)
+                t = float(transferencia_entry.get() or 0)
+                resta = total - (e + t)
+                if abs(resta) < 0.01:
+                    change_label.configure(text="Cuadra con el total ✓")
+                elif resta > 0:
+                    change_label.configure(text=f"Falta asignar: ${resta:.2f}")
+                else:
+                    change_label.configure(text=f"Sobra: ${-resta:.2f}")
+            except ValueError:
+                change_label.configure(text="Monto inválido")
+
         def select_method(method):
             """Cambia el método de pago.
             - Efectivo: se tipea el monto y se calcula el vuelto.
             - Transferencia/Posnet: se pagan justo, sin vuelto, así que el
               monto se completa solo con el total.
-            - Fiado: no se cobra nada ahora, el monto queda en $0."""
+            - Fiado: no se cobra nada ahora, el monto queda en $0.
+            - Mixto: se reparte el total entre efectivo y transferencia."""
             self.payment_method = method
             for m, btn in method_buttons.items():
                 btn.configure(bootstyle="primary" if m == method else "secondary")
+
+            if method == 'mixto':
+                payment_frame.pack_forget()
+                mixto_frame.pack(fill=X, pady=(0, 10), before=change_label)
+                efectivo_entry.delete(0, 'end')
+                transferencia_entry.delete(0, 'end')
+                efectivo_entry.focus()
+                calculate_mixto()
+                return
+
+            mixto_frame.pack_forget()
+            payment_frame.pack(fill=X, pady=(0, 10), before=change_label)
 
             payment_entry.configure(state='normal')
             payment_entry.delete(0, 'end')
 
             if method == 'efectivo':
-                change_label.configure(text="Vuelto: $0.00")
+                payment_label.configure(text="Monto pagado (vacío = pago exacto):")
+                change_label.configure(text="Vuelto: $0.00 (pago exacto)")
             elif method == 'fiado':
+                payment_label.configure(text="Monto pagado:")
                 payment_entry.insert(0, "0.00")
                 payment_entry.configure(state='disabled')
                 change_label.configure(text="Fiado (sin cobrar)")
             else:
+                payment_label.configure(text="Monto pagado:")
                 payment_entry.insert(0, f"{total:.2f}")
                 payment_entry.configure(state='disabled')
                 change_label.configure(text="Pago exacto (sin vuelto)")
 
-        # Vincular el cálculo al cambio en el entry
+        # Vincular el cálculo al cambio en cada entry
         payment_entry.bind('<KeyRelease>', lambda e: calculate_change())
-
-        # Botones
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=X, pady=(20, 0))
+        efectivo_entry.bind('<KeyRelease>', lambda e: calculate_mixto())
+        transferencia_entry.bind('<KeyRelease>', lambda e: calculate_mixto())
 
         def confirm_payment():
+            if self.payment_method == 'mixto':
+                try:
+                    e = float(efectivo_entry.get() or 0)
+                    t = float(transferencia_entry.get() or 0)
+                except ValueError:
+                    messagebox.showerror("Error", "Ingrese montos válidos")
+                    return
+
+                if e <= 0 and t <= 0:
+                    messagebox.showerror(
+                        "Error", "Ingrese al menos un monto")
+                    return
+
+                if abs((e + t) - total) >= 0.01:
+                    messagebox.showerror(
+                        "Error",
+                        f"La suma de efectivo (${e:.2f}) y transferencia "
+                        f"(${t:.2f}) debe ser igual al total (${total:.2f})"
+                    )
+                    return
+
+                payments = []
+                if e > 0:
+                    payments.append({'method': 'efectivo', 'amount': e})
+                if t > 0:
+                    payments.append({'method': 'transferencia', 'amount': t})
+
+                self.payments = payments
+                self.paid = e + t
+                self.change = 0.0
+                self._payment_dialog.destroy()
+                self._payment_dialog = None
+                self.event_generate("<<ConfirmSale>>")
+                return
+
             try:
-                paid = float(payment_entry.get() or 0)
+                paid_str = payment_entry.get().strip()
+                # En efectivo, dejar el monto vacío equivale a pagar justo
+                # (sin vuelto): no obliga a tipear el total a mano.
+                if self.payment_method == 'efectivo' and not paid_str:
+                    paid = total
+                else:
+                    paid = float(paid_str or 0)
                 # El fiado se paga $0 a propósito: no aplica el chequeo de
                 # monto insuficiente.
                 if self.payment_method != 'fiado' and paid < total:
                     messagebox.showerror(
                         "Error", "El monto pagado es insuficiente")
                     return
+                self.payments = None
                 self.paid = paid
                 self.change = paid - total if self.payment_method == 'efectivo' else 0.0
                 self._payment_dialog.destroy()
@@ -567,7 +679,7 @@ class SaleForm(ttk.Frame):
         # Crear ventana modal
         dialog = ttk.Toplevel(self)
         dialog.title("Artículo Varios")
-        dialog.geometry("450x300")
+        dialog.geometry("500x410")
         dialog.resizable(False, False)
         dialog.transient(self)
         dialog.grab_set()
@@ -588,14 +700,14 @@ class SaleForm(ttk.Frame):
         ttk.Label(
             main_frame,
             text="➕ Agregar Artículo Varios",
-            font=("Segoe UI", 16, "bold")
+            font=("Segoe UI", 18, "bold")
         ).pack(pady=(0, 20))
 
         # Descripción
         ttk.Label(
             main_frame,
             text="Para productos que no están en el inventario",
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 11),
             foreground="gray"
         ).pack(pady=(0, 15))
 
@@ -603,10 +715,10 @@ class SaleForm(ttk.Frame):
         ttk.Label(
             main_frame,
             text="Nombre del artículo:",
-            font=("Segoe UI", 11)
+            font=("Segoe UI", 13)
         ).pack(anchor=W, pady=(0, 5))
 
-        name_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        name_entry = ttk.Entry(main_frame, font=("Segoe UI", 14))
         name_entry.pack(fill=X, pady=(0, 15))
 
         # Frame para precio y cantidad
@@ -617,10 +729,10 @@ class SaleForm(ttk.Frame):
         ttk.Label(
             grid_frame,
             text="Precio unitario:",
-            font=("Segoe UI", 11)
+            font=("Segoe UI", 13)
         ).grid(row=0, column=0, sticky=W, pady=(0, 5))
 
-        price_entry = ttk.Entry(grid_frame, font=("Segoe UI", 12))
+        price_entry = ttk.Entry(grid_frame, font=("Segoe UI", 14))
         price_entry.grid(row=1, column=0, sticky=EW, padx=(0, 10))
         # El nombre es opcional (por defecto "Varios"), así que el cursor
         # arranca en precio en vez de nombre.
@@ -631,10 +743,10 @@ class SaleForm(ttk.Frame):
         ttk.Label(
             grid_frame,
             text="Cantidad:",
-            font=("Segoe UI", 11)
+            font=("Segoe UI", 13)
         ).grid(row=0, column=1, sticky=W, pady=(0, 5))
 
-        qty_entry = ttk.Entry(grid_frame, font=("Segoe UI", 12))
+        qty_entry = ttk.Entry(grid_frame, font=("Segoe UI", 14))
         qty_entry.insert(0, "1")  # Default: 1
         qty_entry.grid(row=1, column=1, sticky=EW)
         grid_frame.columnconfigure(1, weight=1)
@@ -698,12 +810,267 @@ class SaleForm(ttk.Frame):
         # ventana principal) apenas se cierra este diálogo.
         dialog.bind('<Return>', lambda e: confirm_varios() or "break")
 
+    def show_edit_item_dialog(self, barcode: str, name: str, qty: int, price: float) -> None:
+        """Muestra un diálogo para editar la cantidad y el precio de un
+        producto ya cargado en el carrito."""
+        dialog = ttk.Toplevel(self)
+        dialog.title("Editar Producto")
+        dialog.geometry("480x330")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Centrar la ventana
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=BOTH, expand=True)
+
+        ttk.Label(
+            main_frame,
+            text="✏️ Editar Producto",
+            font=("Segoe UI", 18, "bold")
+        ).pack(pady=(0, 15))
+
+        ttk.Label(
+            main_frame,
+            text=name,
+            font=("Segoe UI", 13),
+            foreground="gray"
+        ).pack(pady=(0, 15))
+
+        grid_frame = ttk.Frame(main_frame)
+        grid_frame.pack(fill=X, pady=(0, 15))
+
+        ttk.Label(
+            grid_frame,
+            text="Cantidad:",
+            font=("Segoe UI", 13)
+        ).grid(row=0, column=0, sticky=W, pady=(0, 5))
+
+        qty_entry = ttk.Entry(grid_frame, font=("Segoe UI", 14))
+        qty_entry.insert(0, str(qty))
+        qty_entry.grid(row=1, column=0, sticky=EW, padx=(0, 10))
+        grid_frame.columnconfigure(0, weight=1)
+
+        ttk.Label(
+            grid_frame,
+            text="Precio unitario:",
+            font=("Segoe UI", 13)
+        ).grid(row=0, column=1, sticky=W, pady=(0, 5))
+
+        price_entry = ttk.Entry(grid_frame, font=("Segoe UI", 14))
+        price_entry.insert(0, f"{price:.2f}")
+        price_entry.grid(row=1, column=1, sticky=EW)
+        grid_frame.columnconfigure(1, weight=1)
+        qty_entry.focus()
+
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=X, pady=(20, 0))
+
+        def confirm_edit():
+            qty_str = qty_entry.get().strip()
+            price_str = price_entry.get().strip()
+
+            try:
+                new_qty = int(qty_str)
+                if new_qty <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messagebox.showerror("Error", "Ingrese una cantidad válida")
+                qty_entry.focus()
+                return
+
+            try:
+                new_price = float(price_str)
+                if new_price <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messagebox.showerror("Error", "Ingrese un precio válido")
+                price_entry.focus()
+                return
+
+            self.edit_item_data = {'qty': new_qty, 'price': new_price}
+            dialog.destroy()
+            self.event_generate("<<SaveEditItem>>")
+
+        ttk.Button(
+            button_frame,
+            text="Guardar",
+            bootstyle="success",
+            command=confirm_edit,
+            width=15
+        ).pack(side=RIGHT, padx=(5, 0))
+
+        ttk.Button(
+            button_frame,
+            text="Cancelar",
+            bootstyle="secondary",
+            command=dialog.destroy,
+            width=15
+        ).pack(side=RIGHT)
+
+        # "break" corta la propagación: sin esto, el mismo Enter también
+        # dispara el atajo global de "Confirmar Venta" apenas se cierra
+        # este diálogo.
+        dialog.bind('<Return>', lambda e: confirm_edit() or "break")
+
+    def show_search_products_dialog(self, products: list) -> None:
+        """Diálogo para buscar un producto por nombre o código (sin
+        necesidad de tener el código de barras a mano) y agregarlo
+        directo a la venta. Queda abierto después de cada agregado para
+        poder sumar varios productos seguidos."""
+        dialog = ttk.Toplevel(self)
+        dialog.title("Buscar Producto")
+        dialog.geometry("600x570")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=BOTH, expand=True)
+
+        ttk.Label(
+            main_frame,
+            text="🔍 Buscar Producto",
+            font=("Segoe UI", 18, "bold")
+        ).pack(pady=(0, 15))
+
+        search_var = ttk.StringVar()
+        search_entry = ttk.Entry(
+            main_frame, textvariable=search_var, font=("Segoe UI", 14))
+        search_entry.pack(fill=X, pady=(0, 10))
+        search_entry.focus()
+
+        table_frame = ttk.Frame(main_frame)
+        table_frame.pack(fill=BOTH, expand=True, pady=(0, 10))
+
+        columns = ("barcode", "name", "price", "stock")
+        tree = ttk.Treeview(
+            table_frame, columns=columns, show="headings", height=10)
+        tree.heading("barcode", text="Código", anchor="center")
+        tree.heading("name", text="Nombre", anchor="center")
+        tree.heading("price", text="Precio", anchor="center")
+        tree.heading("stock", text="Stock", anchor="center")
+        tree.column("barcode", width=140, anchor="center")
+        tree.column("name", width=260, anchor="w")
+        tree.column("price", width=90, anchor="center")
+        tree.column("stock", width=80, anchor="center")
+
+        scrollbar = ttk.Scrollbar(
+            table_frame, orient=VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        tree.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        # El código de barras es único, así que sirve como iid del árbol
+        # para no tener que volver a buscar el producto al seleccionarlo.
+        def render(items):
+            for i in tree.get_children():
+                tree.delete(i)
+            for p in items:
+                tree.insert('', END, iid=p.barcode, values=(
+                    p.barcode, p.name, f"${p.price:.2f}", int(p.stock)))
+            if items:
+                tree.selection_set(items[0].barcode)
+                tree.focus(items[0].barcode)
+
+        def on_search(*args):
+            term = search_var.get().lower().strip()
+            if not term:
+                render(products)
+                return
+            barcode_matches = [
+                p for p in products if p.barcode.lower().startswith(term)]
+            matched_set = set(barcode_matches)
+            others = [
+                p for p in products if p not in matched_set and (
+                    term in p.barcode.lower() or term in p.name.lower())]
+            render(barcode_matches + others)
+
+        search_var.trace('w', on_search)
+        render(products)
+
+        bottom_row = ttk.Frame(main_frame)
+        bottom_row.pack(fill=X, pady=(0, 5))
+
+        ttk.Label(
+            bottom_row, text="Cantidad:", font=("Segoe UI", 13)
+        ).pack(side=LEFT)
+        qty_entry = ttk.Entry(bottom_row, font=("Segoe UI", 13), width=8)
+        qty_entry.insert(0, "1")
+        qty_entry.pack(side=LEFT, padx=(10, 10))
+
+        agregar_btn = ttk.Button(
+            bottom_row, text="➕ Agregar a la venta", bootstyle="success")
+        agregar_btn.pack(side=LEFT)
+
+        status_label = ttk.Label(
+            main_frame, text="", font=("Segoe UI", 10), foreground="gray")
+        status_label.pack(anchor=W, pady=(0, 10))
+
+        def agregar(event=None):
+            selected = tree.selection()
+            if not selected:
+                messagebox.showerror(
+                    "Error", "Seleccione un producto de la lista")
+                return "break"
+
+            qty_str = qty_entry.get().strip()
+            try:
+                qty = int(qty_str) if qty_str else 1
+                if qty <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror("Error", "Ingrese una cantidad válida")
+                return "break"
+
+            barcode = selected[0]
+            nombre = tree.set(barcode, "name")
+
+            self.search_add_data = {'barcode': barcode, 'qty': qty}
+            self.event_generate("<<AddFromSearch>>")
+
+            status_label.configure(
+                text=f"✓ Agregado: {nombre} x{qty}")
+            qty_entry.delete(0, 'end')
+            qty_entry.insert(0, "1")
+            return "break"
+
+        agregar_btn.configure(command=agregar)
+        tree.bind('<Double-1>', agregar)
+        qty_entry.bind('<Return>', agregar)
+
+        ttk.Button(
+            main_frame,
+            text="Cerrar",
+            bootstyle="secondary",
+            command=dialog.destroy
+        ).pack(anchor=E)
+
+        # Corta el Enter acá: sin esto, un Enter en la búsqueda (sin caer
+        # en un binding más específico) se escapa al atajo global de
+        # "Confirmar Venta" mientras este diálogo sigue abierto.
+        dialog.bind('<Return>', lambda e: "break")
+
     def show_register_product_dialog(self, barcode: str) -> None:
         """Muestra un diálogo para registrar en el inventario un código de
         barras que no fue encontrado, sin pedir stock (no se usa acá)."""
         dialog = ttk.Toplevel(self)
         dialog.title("Registrar Producto")
-        dialog.geometry("450x280")
+        dialog.geometry("500x390")
         dialog.resizable(False, False)
         dialog.transient(self)
         dialog.grab_set()
@@ -722,33 +1089,33 @@ class SaleForm(ttk.Frame):
         ttk.Label(
             main_frame,
             text="🆕 Registrar Producto",
-            font=("Segoe UI", 16, "bold")
+            font=("Segoe UI", 18, "bold")
         ).pack(pady=(0, 15))
 
         ttk.Label(
             main_frame,
             text=f"Código de barras: {barcode}",
-            font=("Segoe UI", 11),
+            font=("Segoe UI", 13),
             foreground="gray"
         ).pack(pady=(0, 15))
 
         ttk.Label(
             main_frame,
             text="Nombre del producto:",
-            font=("Segoe UI", 11)
+            font=("Segoe UI", 13)
         ).pack(anchor=W, pady=(0, 5))
 
-        name_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        name_entry = ttk.Entry(main_frame, font=("Segoe UI", 14))
         name_entry.pack(fill=X, pady=(0, 15))
         name_entry.focus()
 
         ttk.Label(
             main_frame,
             text="Precio:",
-            font=("Segoe UI", 11)
+            font=("Segoe UI", 13)
         ).pack(anchor=W, pady=(0, 5))
 
-        price_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        price_entry = ttk.Entry(main_frame, font=("Segoe UI", 14))
         price_entry.pack(fill=X, pady=(0, 15))
 
         button_frame = ttk.Frame(main_frame)

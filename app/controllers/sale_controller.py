@@ -32,6 +32,7 @@ class SaleController:
         self.items = []
         self.temp_stock = {}
         self._varios_counter = 0
+        self._editing_barcode = None
         # Hasta 3 ventas en curso a la vez (ej. dos clientes en el
         # mostrador): cada una guarda su propio carrito por separado.
         self.active_slot = 0
@@ -55,6 +56,13 @@ class SaleController:
         self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
         # Conectar evento de artículo varios
         self.sale_form.bind("<<AddVarios>>", lambda e: self.add_varios())
+        # Conectar evento de guardado del diálogo de edición (cantidad/precio)
+        self.sale_form.bind(
+            "<<SaveEditItem>>", lambda e: self._on_save_edit_item())
+        # Conectar botón y evento de búsqueda de productos
+        self.sale_form.search_button.configure(command=self.show_search_dialog)
+        self.sale_form.bind(
+            "<<AddFromSearch>>", lambda e: self._on_add_from_search())
         # Conectar evento de registro rápido de producto no encontrado
         self.sale_form.bind(
             "<<RegisterProduct>>", lambda e: self.register_product())
@@ -97,7 +105,8 @@ class SaleController:
             self.product_list.refresh()
 
     def edit_item(self) -> None:
-        """Edita la cantidad del item seleccionado."""
+        """Abre el diálogo para editar la cantidad y el precio del item
+        seleccionado."""
         selected_items = self.sale_form.tree.selection()
         if not selected_items:
             return
@@ -105,7 +114,6 @@ class SaleController:
         # Obtener el item seleccionado
         item = selected_items[0]
         values = self.sale_form.tree.item(item)['values']
-        current_qty = int(values[2])  # La cantidad está en la tercera columna
         # El código de barras está en la primera columna
         barcode = str(values[0])
 
@@ -113,7 +121,10 @@ class SaleController:
         # no hay datos que recargar para editarlos.
         cart_item = next(
             (i for i in self.items if str(i['barcode']) == barcode), None)
-        if cart_item and cart_item.get('is_varios', False):
+        if not cart_item:
+            return
+
+        if cart_item.get('is_varios', False):
             messagebox.showinfo(
                 "No editable",
                 "Los artículos 'Varios' no se pueden editar.\n"
@@ -121,102 +132,64 @@ class SaleController:
             )
             return
 
-        # Cargar datos en el formulario
-        self.sale_form.clear_fields()
-        self.sale_form.barcode_entry.insert(0, barcode)
-        self.sale_form.qty_entry.insert(0, str(current_qty))
-        self.sale_form.barcode_entry.configure(state="disabled")
-        self.sale_form.qty_entry.focus()
+        self._editing_barcode = barcode
+        self.sale_form.show_edit_item_dialog(
+            barcode, cart_item['name'],
+            int(cart_item['qty']), float(cart_item['price']))
 
-        # Función para guardar la edición
-        def save_edit_on_enter(event=None):
-            self._save_edit(barcode, current_qty)
-            # Desvincular el evento Enter después de guardar
-            self.sale_form.qty_entry.unbind('<Return>')
+    def _on_save_edit_item(self) -> None:
+        """Aplica la cantidad/precio editados al item del carrito. Si el
+        precio cambió, pregunta si también hay que actualizarlo en el
+        inventario (Productos)."""
+        if not hasattr(self.sale_form, 'edit_item_data'):
+            return
 
-        # Vincular el evento Enter al campo de cantidad
-        self.sale_form.qty_entry.bind('<Return>', save_edit_on_enter)
+        data = self.sale_form.edit_item_data
+        delattr(self.sale_form, 'edit_item_data')
 
-        # Cambiar el botón de agregar por guardar
-        self.sale_form.add_button.configure(
-            text="Guardar",
-            command=save_edit_on_enter
-        )
+        barcode = self._editing_barcode
+        cart_item = next(
+            (i for i in self.items if str(i['barcode']) == barcode), None)
+        if not cart_item:
+            return
 
-        # Deshabilitar botones de edición y eliminación
-        self.sale_form.set_action_buttons_state("disabled")
+        old_qty = int(cart_item['qty'])
+        old_price = float(cart_item['price'])
+        new_qty = data['qty']
+        new_price = data['price']
 
-    def _save_edit(self, old_barcode: str, old_qty: int) -> None:
-        """Guarda los cambios de la edición.
+        # Liberar el stock temporal reservado con la cantidad anterior y
+        # reservarlo de nuevo con la cantidad nueva.
+        if barcode in self.temp_stock:
+            self.temp_stock[barcode] -= old_qty
+            if self.temp_stock[barcode] <= 0:
+                del self.temp_stock[barcode]
+        self.temp_stock[barcode] = self.temp_stock.get(barcode, 0) + new_qty
 
-        Args:
-            old_barcode: El código de barras original.
-            old_qty: La cantidad original.
-        """
-        try:
-            # Obtener datos del formulario
-            data = self.sale_form.get_item_data()
-            new_qty = int(data['qty'])
-            barcode = str(data['barcode'])
+        cart_item['qty'] = new_qty
+        cart_item['price'] = new_price
+        cart_item['subtotal'] = new_qty * new_price
 
-            if new_qty <= 0:
-                messagebox.showerror("Error", "La cantidad debe ser mayor a 0")
-                return
+        self._update_table()
 
-            # Obtener el producto de la base de datos
-            product = self.db.get_product_by_barcode(barcode)
-            if not product:
-                messagebox.showerror("Error", "Producto no encontrado")
-                return
+        # Limpiar la selección de la tabla
+        for item in self.sale_form.tree.selection():
+            self.sale_form.tree.selection_remove(item)
 
-            # Liberar el stock temporal actual
-            if barcode in self.temp_stock:
-                self.temp_stock[barcode] -= old_qty
-                if self.temp_stock[barcode] <= 0:
-                    del self.temp_stock[barcode]
-
-            try:
-                # Actualizar el stock temporal con la nueva cantidad
-                self.temp_stock[barcode] = self.temp_stock.get(
-                    barcode, 0) + new_qty
-
-                # Actualizar la cantidad en la lista de items
-                item_updated = False
-
-                for item in self.items:
-                    if str(item['barcode']) == barcode:
-                        # Actualizar cantidad y subtotal
-                        item['qty'] = new_qty
-                        item['subtotal'] = new_qty * float(item['price'])
-                        item_updated = True
-                        break
-
-                if not item_updated:
-                    return
-
-                # Actualizar la tabla y el total
-                self._update_table()
-
-                # Restaurar el formulario
-                self.sale_form.clear_fields()
-                self.sale_form.barcode_entry.configure(state="normal")
-                self.sale_form.add_button.configure(
-                    text="Agregar",
-                    command=self.add_item
-                )
-
-                # Deshabilitar botones de acción
-                self.sale_form.set_action_buttons_state("disabled")
-
-                # Limpiar la selección de la tabla
-                for item in self.sale_form.tree.selection():
-                    self.sale_form.tree.selection_remove(item)
-
-            except Exception as e:
-                messagebox.showerror(
-                    "Error", f"Error al actualizar la cantidad: {str(e)}")
-        except ValueError:
-            messagebox.showerror("Error", "Ingrese una cantidad válida")
+        # Si el precio cambió, ofrecer actualizarlo también en el inventario
+        if new_price != old_price:
+            if messagebox.askyesno(
+                "Actualizar precio",
+                f"El precio de '{cart_item['name']}' se cambió a "
+                f"${new_price:.2f}.\n\n"
+                "¿Desea actualizar también el precio en el inventario "
+                "(Productos)?"
+            ):
+                product = self.db.get_product_by_barcode(barcode)
+                if product:
+                    product.price = new_price
+                    self.db.update_product(product)
+                    self._update_product_list()
 
     def delete_item(self) -> None:
         """Elimina el item seleccionado de la venta."""
@@ -302,6 +275,28 @@ class SaleController:
 
         # El barcode y la cantidad siguen cargados en el formulario:
         # continuar el flujo normal para sumarlo a la venta.
+        self.add_item()
+
+    def show_search_dialog(self) -> None:
+        """Abre el diálogo de búsqueda de productos por nombre/código para
+        agregarlos a la venta sin necesidad del código de barras a mano."""
+        products = self.db.get_all_products()
+        self.sale_form.show_search_products_dialog(products)
+
+    def _on_add_from_search(self) -> None:
+        """Agrega a la venta el producto elegido en el diálogo de
+        búsqueda, reutilizando la misma lógica que agregar por código de
+        barras (suma cantidad si ya estaba en el carrito, etc.)."""
+        if not hasattr(self.sale_form, 'search_add_data'):
+            return
+
+        data = self.sale_form.search_add_data
+        delattr(self.sale_form, 'search_add_data')
+
+        self.sale_form.barcode_entry.delete(0, 'end')
+        self.sale_form.barcode_entry.insert(0, data['barcode'])
+        self.sale_form.qty_entry.delete(0, 'end')
+        self.sale_form.qty_entry.insert(0, str(data['qty']))
         self.add_item()
 
     def add_item(self):
@@ -470,6 +465,8 @@ class SaleController:
             paid = getattr(self.sale_form, 'paid', 0.0)
             change = getattr(self.sale_form, 'change', 0.0)
             payment_method = getattr(self.sale_form, 'payment_method', 'efectivo')
+            # Solo presente si la venta se pagó dividida entre dos métodos
+            payments = getattr(self.sale_form, 'payments', None)
             total = sum(float(item['subtotal']) for item in self.items)
             date = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
 
@@ -478,7 +475,7 @@ class SaleController:
             # de dejar una venta a medio registrar.
             sale_id = self.db.add_sale(
                 date=date, total=total, paid=paid, change=change,
-                payment_method=payment_method, commit=False)
+                payment_method=payment_method, payments=payments, commit=False)
 
             # Registrar los detalles de la venta
             for item in self.items:

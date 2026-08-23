@@ -15,7 +15,7 @@ class CajaForm(ttk.Frame):
     def _create_widgets(self):
         # Título
         ttk.Label(
-            self, text="Caja", font=("Segoe UI", 24, "bold")
+            self, text="Caja", font=("Segoe UI", 27, "bold")
         ).pack(anchor=W, pady=(0, 15))
 
         # ===== Navegación entre días: por defecto se ve hoy, pero se
@@ -27,7 +27,7 @@ class CajaForm(ttk.Frame):
             nav_row, text="◀ Día anterior", bootstyle="secondary", width=14)
         self.dia_anterior_button.pack(side=LEFT)
         self.fecha_label = ttk.Label(
-            nav_row, text="Hoy", font=("Segoe UI", 13, "bold"))
+            nav_row, text="Hoy", font=("Segoe UI", 15, "bold"))
         self.fecha_label.pack(side=LEFT, padx=15)
         self.dia_siguiente_button = ttk.Button(
             nav_row, text="Día siguiente ▶", bootstyle="secondary", width=14)
@@ -42,7 +42,7 @@ class CajaForm(ttk.Frame):
             self, bootstyle="warning", padding=10)
         self.aviso_pendiente_label = ttk.Label(
             self.aviso_pendiente_frame, text="",
-            font=("Segoe UI", 10, "bold"), bootstyle="inverse-warning")
+            font=("Segoe UI", 11, "bold"), bootstyle="inverse-warning")
         self.aviso_pendiente_label.pack(side=LEFT)
         self.ir_a_pendiente_button = ttk.Button(
             self.aviso_pendiente_frame, text="Ir a ese día",
@@ -50,7 +50,7 @@ class CajaForm(ttk.Frame):
         self.ir_a_pendiente_button.pack(side=RIGHT)
 
         self.estado_label = ttk.Label(
-            self, text="", font=("Segoe UI", 11, "bold"), foreground="#c0392b")
+            self, text="", font=("Segoe UI", 13, "bold"), foreground="#c0392b")
         self.estado_label.pack(anchor=W, pady=(0, 10))
 
         # ===== Resultado del día: el número más importante de la
@@ -66,38 +66,38 @@ class CajaForm(ttk.Frame):
         ventas_col = ttk.Frame(cuenta_row)
         ventas_col.pack(side=LEFT)
         ttk.Label(
-            ventas_col, text="Total Ventas", font=("Segoe UI", 13)
+            ventas_col, text="Total Ventas", font=("Segoe UI", 15)
         ).pack(anchor=W)
         self.label_total_ventas_dia = ttk.Label(
-            ventas_col, text="$0.00", font=("Segoe UI", 22, "bold"),
+            ventas_col, text="$0.00", font=("Segoe UI", 25, "bold"),
             bootstyle="success")
         self.label_total_ventas_dia.pack(anchor=W)
 
         ttk.Label(
-            cuenta_row, text="−", font=("Segoe UI", 22)
+            cuenta_row, text="−", font=("Segoe UI", 25)
         ).pack(side=LEFT, padx=15, pady=(20, 0))
 
         gastos_col = ttk.Frame(cuenta_row)
         gastos_col.pack(side=LEFT)
         ttk.Label(
-            gastos_col, text="Total Gastos", font=("Segoe UI", 13)
+            gastos_col, text="Total Gastos", font=("Segoe UI", 15)
         ).pack(anchor=W)
         self.label_total_gastos_dia = ttk.Label(
-            gastos_col, text="$0.00", font=("Segoe UI", 22, "bold"),
+            gastos_col, text="$0.00", font=("Segoe UI", 25, "bold"),
             bootstyle="danger")
         self.label_total_gastos_dia.pack(anchor=W)
 
         ttk.Label(
-            cuenta_row, text="=", font=("Segoe UI", 22)
+            cuenta_row, text="=", font=("Segoe UI", 25)
         ).pack(side=LEFT, padx=15, pady=(20, 0))
 
         resultado_col = ttk.Frame(cuenta_row)
         resultado_col.pack(side=LEFT)
         ttk.Label(
-            resultado_col, text="Resultado de hoy", font=("Segoe UI", 13)
+            resultado_col, text="Resultado de hoy", font=("Segoe UI", 15)
         ).pack(anchor=W)
         self.label_resultado_dia = ttk.Label(
-            resultado_col, text="$0.00", font=("Segoe UI", 32, "bold"),
+            resultado_col, text="$0.00", font=("Segoe UI", 35, "bold"),
             bootstyle="success")
         self.label_resultado_dia.pack(anchor=W)
 
@@ -105,7 +105,7 @@ class CajaForm(ttk.Frame):
             resultado_card,
             text="Gastos incluye retiros. No cuenta lo fiado (todavía no se cobró) "
                  "ni el bolsillo del dueño (no es plata del negocio).",
-            font=("Segoe UI", 9), foreground="gray"
+            font=("Segoe UI", 10), foreground="gray"
         ).pack(anchor=W, pady=(10, 0))
 
         # ===== Fila de tarjetas: ventas del día por método =====
@@ -127,12 +127,12 @@ class CajaForm(ttk.Frame):
 
         ttk.Label(
             resumen_card, text="Fondo, ingresos y egresos del día",
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 16, "bold")
         ).grid(row=0, column=0, columnspan=4, sticky=W, pady=(0, 15))
 
         # Fondo inicial (editable)
         ttk.Label(resumen_card, text="Fondo inicial:",
-                 font=("Segoe UI", 11)).grid(row=1, column=0, sticky=W, pady=4)
+                 font=("Segoe UI", 13)).grid(row=1, column=0, sticky=W, pady=4)
         fondo_frame = ttk.Frame(resumen_card)
         fondo_frame.grid(row=1, column=1, sticky=W, padx=(10, 30))
         self.fondo_inicial_entry = ttk.Entry(fondo_frame, width=12)
@@ -149,7 +149,7 @@ class CajaForm(ttk.Frame):
 
         ttk.Label(
             resumen_card, text="Transferencia y bolsillo no afectan el efectivo de la caja",
-            font=("Segoe UI", 9), foreground="gray"
+            font=("Segoe UI", 10), foreground="gray"
         ).grid(row=4, column=0, columnspan=4, sticky=W, pady=(8, 0))
 
         # ===== Banner de efectivo esperado (color según el signo) =====
@@ -158,10 +158,10 @@ class CajaForm(ttk.Frame):
 
         ttk.Label(
             efectivo_card, text="Efectivo esperado en caja",
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 15)
         ).pack(side=LEFT)
         self.label_efectivo_esperado = ttk.Label(
-            efectivo_card, text="$0.00", font=("Segoe UI", 22, "bold"),
+            efectivo_card, text="$0.00", font=("Segoe UI", 25, "bold"),
             bootstyle="success")
         self.label_efectivo_esperado.pack(side=LEFT, padx=(15, 0))
 
@@ -175,7 +175,7 @@ class CajaForm(ttk.Frame):
 
         ttk.Label(
             mov_card, text="Agregar gasto / retiro / pago de bolsillo",
-            font=("Segoe UI", 14, "bold")
+            font=("Segoe UI", 16, "bold")
         ).pack(anchor=W, pady=(0, 10))
 
         tipo_row = ttk.Frame(mov_card)
@@ -202,7 +202,7 @@ class CajaForm(ttk.Frame):
         self.forma_pago_row.pack(fill=X, pady=(0, 10))
         ttk.Label(
             self.forma_pago_row, text="¿Cómo se pagó este gasto?",
-            font=("Segoe UI", 10), foreground="gray"
+            font=("Segoe UI", 11), foreground="gray"
         ).pack(side=LEFT, padx=(0, 10))
         self.forma_pago_buttons = {}
         for forma, label in (('efectivo', 'Efectivo (caja)'),
@@ -218,14 +218,14 @@ class CajaForm(ttk.Frame):
         form_row = self.mov_form_row = ttk.Frame(mov_card)
         form_row.pack(fill=X)
 
-        ttk.Label(form_row, text="Descripción:", font=("Segoe UI", 11)).grid(
+        ttk.Label(form_row, text="Descripción:", font=("Segoe UI", 13)).grid(
             row=0, column=0, sticky=W)
-        self.descripcion_entry = ttk.Entry(form_row, font=("Segoe UI", 11))
+        self.descripcion_entry = ttk.Entry(form_row, font=("Segoe UI", 13))
         self.descripcion_entry.grid(row=1, column=0, sticky=EW, padx=(0, 10))
 
-        ttk.Label(form_row, text="Monto:", font=("Segoe UI", 11)).grid(
+        ttk.Label(form_row, text="Monto:", font=("Segoe UI", 13)).grid(
             row=0, column=1, sticky=W)
-        self.monto_entry = ttk.Entry(form_row, font=("Segoe UI", 11), width=15)
+        self.monto_entry = ttk.Entry(form_row, font=("Segoe UI", 13), width=15)
         self.monto_entry.grid(row=1, column=1, sticky=EW, padx=(0, 10))
 
         self.agregar_movimiento_button = ttk.Button(
@@ -236,7 +236,7 @@ class CajaForm(ttk.Frame):
 
         # ===== Tabla de movimientos del día =====
         self.movimientos_title_label = ttk.Label(
-            self, text="Movimientos de hoy", font=("Segoe UI", 14, "bold"))
+            self, text="Movimientos de hoy", font=("Segoe UI", 16, "bold"))
         self.movimientos_title_label.pack(anchor=W, pady=(0, 10))
 
         table_frame = ttk.Frame(self, bootstyle="light", padding=10)
@@ -246,8 +246,8 @@ class CajaForm(ttk.Frame):
         # propio, así que quedaba con el tamaño chico por defecto de ttk
         # en vez de acompañar al resto (11-12pt en todos lados).
         style = ttk.Style()
-        style.configure("Caja.Treeview", rowheight=38, font=('Segoe UI', 12))
-        style.configure("Caja.Treeview.Heading", font=('Segoe UI', 12, 'bold'))
+        style.configure("Caja.Treeview", rowheight=43, font=('Segoe UI', 14))
+        style.configure("Caja.Treeview.Heading", font=('Segoe UI', 14, 'bold'))
 
         columns = ("hora", "tipo", "descripcion", "monto")
         self.tree = ttk.Treeview(
@@ -257,10 +257,10 @@ class CajaForm(ttk.Frame):
         self.tree.heading("tipo", text="Tipo", anchor=CENTER)
         self.tree.heading("descripcion", text="Descripción", anchor=W)
         self.tree.heading("monto", text="Monto", anchor=E)
-        self.tree.column("hora", width=90, anchor=CENTER)
-        self.tree.column("tipo", width=140, anchor=CENTER)
-        self.tree.column("descripcion", width=350, anchor=W)
-        self.tree.column("monto", width=120, anchor=E)
+        self.tree.column("hora", width=100, anchor=CENTER)
+        self.tree.column("tipo", width=160, anchor=CENTER)
+        self.tree.column("descripcion", width=400, anchor=W)
+        self.tree.column("monto", width=140, anchor=E)
 
         scrollbar = ttk.Scrollbar(
             table_frame, orient=VERTICAL, command=self.tree.yview)
@@ -272,9 +272,9 @@ class CajaForm(ttk.Frame):
         self.tree.tag_configure('oddrow', background='white')
 
     def _resumen_label(self, text, row, col, parent, attr_name):
-        ttk.Label(parent, text=text, font=("Segoe UI", 11)).grid(
+        ttk.Label(parent, text=text, font=("Segoe UI", 13)).grid(
             row=row, column=col, sticky=W, pady=4)
-        label = ttk.Label(parent, text="$0.00", font=("Segoe UI", 12, "bold"))
+        label = ttk.Label(parent, text="$0.00", font=("Segoe UI", 14, "bold"))
         label.grid(row=row, column=col + 1, sticky=W, padx=(10, 30))
         setattr(self, attr_name, label)
 
@@ -285,10 +285,10 @@ class CajaForm(ttk.Frame):
         card.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 10))
 
         ttk.Label(
-            card, text=title, font=("Segoe UI", 10), wraplength=140
+            card, text=title, font=("Segoe UI", 11), wraplength=140
         ).pack(anchor=W)
         value_label = ttk.Label(
-            card, text="$0.00", font=("Segoe UI", 18, "bold"),
+            card, text="$0.00", font=("Segoe UI", 20, "bold"),
             bootstyle=bootstyle)
         value_label.pack(anchor=W, pady=(6, 0))
         return value_label
@@ -423,7 +423,7 @@ class CajaForm(ttk.Frame):
         """Pide el efectivo contado y muestra la diferencia antes de cerrar."""
         dialog = ttk.Toplevel(self)
         dialog.title("Cerrar Caja")
-        dialog.geometry("380x260")
+        dialog.geometry("440x330")
         dialog.resizable(False, False)
         dialog.transient(self)
         dialog.grab_set()
@@ -438,23 +438,23 @@ class CajaForm(ttk.Frame):
         main_frame.pack(fill=BOTH, expand=True)
 
         ttk.Label(
-            main_frame, text="Cerrar Caja", font=("Segoe UI", 16, "bold")
+            main_frame, text="Cerrar Caja", font=("Segoe UI", 18, "bold")
         ).pack(pady=(0, 15))
 
         ttk.Label(
             main_frame, text=f"Efectivo esperado: ${efectivo_esperado:.2f}",
-            font=("Segoe UI", 12)
+            font=("Segoe UI", 14)
         ).pack(pady=(0, 15))
 
         ttk.Label(
-            main_frame, text="Efectivo contado:", font=("Segoe UI", 11)
+            main_frame, text="Efectivo contado:", font=("Segoe UI", 13)
         ).pack(anchor=W, pady=(0, 5))
-        contado_entry = ttk.Entry(main_frame, font=("Segoe UI", 12))
+        contado_entry = ttk.Entry(main_frame, font=("Segoe UI", 14))
         contado_entry.pack(fill=X, pady=(0, 10))
         contado_entry.focus()
 
         diferencia_label = ttk.Label(
-            main_frame, text="", font=("Segoe UI", 12, "bold"))
+            main_frame, text="", font=("Segoe UI", 14, "bold"))
         diferencia_label.pack(pady=(0, 10))
 
         def calcular_diferencia(event=None):
@@ -508,7 +508,7 @@ class CajaForm(ttk.Frame):
         cargarlo de nuevo."""
         dialog = ttk.Toplevel(self)
         dialog.title("Editar movimiento")
-        dialog.geometry("380x320")
+        dialog.geometry("440x400")
         dialog.resizable(False, False)
         dialog.transient(self)
         dialog.grab_set()
@@ -517,27 +517,27 @@ class CajaForm(ttk.Frame):
         main_frame.pack(fill=BOTH, expand=True)
 
         ttk.Label(
-            main_frame, text="Editar movimiento", font=("Segoe UI", 16, "bold")
+            main_frame, text="Editar movimiento", font=("Segoe UI", 18, "bold")
         ).pack(pady=(0, 15))
 
         ttk.Label(
-            main_frame, text="Descripción:", font=("Segoe UI", 11)
+            main_frame, text="Descripción:", font=("Segoe UI", 13)
         ).pack(anchor=W)
-        descripcion_entry = ttk.Entry(main_frame, font=("Segoe UI", 11), width=30)
+        descripcion_entry = ttk.Entry(main_frame, font=("Segoe UI", 13), width=30)
         descripcion_entry.insert(0, movimiento['descripcion'])
         descripcion_entry.pack(fill=X, pady=(0, 10))
 
         ttk.Label(
-            main_frame, text="Monto:", font=("Segoe UI", 11)
+            main_frame, text="Monto:", font=("Segoe UI", 13)
         ).pack(anchor=W)
-        monto_entry = ttk.Entry(main_frame, font=("Segoe UI", 11))
+        monto_entry = ttk.Entry(main_frame, font=("Segoe UI", 13))
         monto_entry.insert(0, f"{float(movimiento['monto']):.2f}")
         monto_entry.pack(fill=X, pady=(0, 10))
 
         forma = {'valor': movimiento['forma_pago'] or 'efectivo'}
         if movimiento['tipo'] == 'gasto':
             ttk.Label(
-                main_frame, text="¿Cómo se pagó?", font=("Segoe UI", 11)
+                main_frame, text="¿Cómo se pagó?", font=("Segoe UI", 13)
             ).pack(anchor=W, pady=(0, 5))
             forma_row = ttk.Frame(main_frame)
             forma_row.pack(fill=X, pady=(0, 10))

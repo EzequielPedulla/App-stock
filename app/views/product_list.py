@@ -12,7 +12,7 @@ class ProductList(ttk.Frame):
     def _create_widgets(self):
         # Título de la lista
         title_label = ttk.Label(self, text="Lista de Productos",
-                                font=("Segoe UI", 16, "bold"))
+                                font=("Segoe UI", 18, "bold"))
         title_label.pack(pady=(0, 10), anchor='w', padx=20)
 
         # ===== FRAME DE BÚSQUEDA =====
@@ -20,13 +20,13 @@ class ProductList(ttk.Frame):
         search_frame.pack(fill='x', padx=20, pady=(0, 15))
 
         ttk.Label(search_frame, text="🔍 Buscar:",
-                  font=("Segoe UI", 11)).pack(side='left', padx=(0, 10))
+                  font=("Segoe UI", 13)).pack(side='left', padx=(0, 10))
 
         self.search_var = ttk.StringVar()
         self.search_var.trace('w', self._on_search)  # Se ejecuta al escribir
 
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var,
-                                 font=("Segoe UI", 11), width=40)
+                                 font=("Segoe UI", 13), width=40)
         search_entry.pack(side='left', fill='x', expand=True)
 
         # Botón para limpiar búsqueda
@@ -37,7 +37,7 @@ class ProductList(ttk.Frame):
 
         # Label informativo
         self.info_label = ttk.Label(search_frame, text="",
-                                    font=("Segoe UI", 9), foreground="gray")
+                                    font=("Segoe UI", 10), foreground="gray")
         self.info_label.pack(side='left', padx=(10, 0))
 
         # Configurar estilo
@@ -46,10 +46,10 @@ class ProductList(ttk.Frame):
             "Custom.Treeview",
             background="white",
             foreground="black",
-            rowheight=35,
+            rowheight=40,
             fieldbackground="white",
             borderwidth=0,
-            font=('Segoe UI', 11)
+            font=('Segoe UI', 13)
         )
         style.configure(
             "Custom.Treeview.Heading",
@@ -57,7 +57,7 @@ class ProductList(ttk.Frame):
             foreground="white",
             relief="flat",
             borderwidth=0,
-            font=('Segoe UI', 12, 'bold')
+            font=('Segoe UI', 14, 'bold')
         )
         style.map(
             "Custom.Treeview",
@@ -82,10 +82,10 @@ class ProductList(ttk.Frame):
         self.tabla.heading("stock", text="Stock", anchor="center")
 
         # Columnas
-        self.tabla.column("codigo", width=180, anchor="center", minwidth=180)
-        self.tabla.column("nombre", width=250, anchor="center", minwidth=250)
-        self.tabla.column("precio", width=120, anchor="center", minwidth=120)
-        self.tabla.column("stock", width=120, anchor="center", minwidth=120)
+        self.tabla.column("codigo", width=210, anchor="center", minwidth=210)
+        self.tabla.column("nombre", width=290, anchor="center", minwidth=290)
+        self.tabla.column("precio", width=140, anchor="center", minwidth=140)
+        self.tabla.column("stock", width=140, anchor="center", minwidth=140)
 
         # Scrollbar
         scrollbar = ttk.Scrollbar(
@@ -155,13 +155,20 @@ class ProductList(ttk.Frame):
         self.tabla.tag_configure('oddrow', background='white')
 
     def load_products(self, products):
-        """Carga la lista completa de productos"""
+        """Carga la lista completa de productos, respetando el filtro de
+        búsqueda activo (si hay uno) en vez de mostrar todo de nuevo. Así,
+        al guardar la edición de un producto (ej. buscando "beldent" para
+        corregir precios), la tabla sigue mostrando solo esos resultados
+        en vez de volver a la lista completa, y se puede seguir editando
+        el resto de la búsqueda sin tener que volver a escribirla."""
         self.all_products = products
-        self._display_products(products)
 
-        # Actualizar info
-        if products:
-            self.info_label.configure(text=f"Total: {len(products)} productos")
+        if self.search_var.get().strip():
+            self._on_search()
+        else:
+            self._display_products(products)
+            if products:
+                self.info_label.configure(text=f"Total: {len(products)} productos")
 
     def refresh(self) -> None:
         """Actualiza la lista de productos desde la base de datos"""

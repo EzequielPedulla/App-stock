@@ -14,25 +14,40 @@ class MainWindow(ttk.Window):
         super().__init__(title="Sistema de Gestión de Inventario",
                          themename="flatly")
         self.resizable(True, True)
-        self.minsize(900, 550)
+        self.minsize(1024, 700)
         self._ajustar_tamano_inicial()
         self._setup_custom_styles()
         self._create_widgets()
 
     def _ajustar_tamano_inicial(self) -> None:
         """Usa la mayor parte de la pantalla disponible, sin superar un
-        tamaño cómodo ni exceder el monitor real (puede ser chico)."""
+        tamaño cómodo ni exceder el monitor real (puede ser chico). Pensado
+        para que en un monitor 1280x1024 (la PC donde corre el programa en
+        el local) la ventana ocupe casi toda la pantalla, dejando solo un
+        margen chico para la barra de tareas."""
         screen_w = self.winfo_screenwidth()
         screen_h = self.winfo_screenheight()
-        width = min(1400, int(screen_w * 0.9))
-        height = min(750, int(screen_h * 0.85))
+        width = min(1550, int(screen_w * 0.95))
+        height = min(980, int(screen_h * 0.92))
         x = (screen_w - width) // 2
         y = (screen_h - height) // 2
         self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _setup_custom_styles(self) -> None:
-        """Configura estilos personalizados para los botones del menú."""
+        """Configura estilos personalizados y el tamaño base de fuente de
+        toda la app. Pensado para que se vea bien en un monitor 1280x1024,
+        donde el texto chico por defecto cuesta leer."""
         style = ttk.Style()
+
+        # Fuente base: cubre los widgets que no definen su propia fuente
+        # explícita (algunos Entry, y cualquier Treeview sin estilo propio,
+        # como el de "Buscar Producto" en Ventas).
+        style.configure(".", font=("Segoe UI", 13))
+        style.configure("Treeview", font=("Segoe UI", 13), rowheight=38)
+        style.configure("Treeview.Heading", font=("Segoe UI", 14, "bold"))
+        style.configure("TButton", font=("Segoe UI", 13))
+        style.configure("TEntry", font=("Segoe UI", 13))
+        style.configure("TLabel", font=("Segoe UI", 13))
 
         # Estilo para botones del menú lateral
         style.configure(
@@ -41,8 +56,8 @@ class MainWindow(ttk.Window):
             foreground="white",
             borderwidth=0,
             focuscolor="none",
-            font=("Segoe UI", 13, "normal"),
-            padding=(20, 18),
+            font=("Segoe UI", 15, "normal"),
+            padding=(22, 20),
             relief="flat"
         )
 
@@ -54,7 +69,7 @@ class MainWindow(ttk.Window):
 
     def _create_widgets(self):
         # Frame de navegación (menú lateral)
-        self.frame_nav = ttk.Frame(self, bootstyle="primary", width=200)
+        self.frame_nav = ttk.Frame(self, bootstyle="primary", width=230)
         self.frame_nav.pack(side=LEFT, fill=Y)
         self.frame_nav.pack_propagate(False)
 
@@ -64,7 +79,7 @@ class MainWindow(ttk.Window):
 
         # Título del menú dinámico
         self.titulo_label = ttk.Label(menu_container, text="Productos",
-                                      font=("Segoe UI", 20),
+                                      font=("Segoe UI", 23),
                                       foreground="white",
                                       background="#34495e")
         self.titulo_label.pack(pady=(30, 20), padx=20, anchor="center")
