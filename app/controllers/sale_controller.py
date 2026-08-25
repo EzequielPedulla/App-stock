@@ -54,6 +54,8 @@ class SaleController:
         self.sale_form.tree.bind('<Delete>', lambda e: self.delete_item())
         # Conectar evento de confirmación de venta
         self.sale_form.bind("<<ConfirmSale>>", lambda e: self.confirm_sale())
+        # F5 vacía la venta en curso (carrito), con confirmación si tiene algo
+        self.sale_form.bind("<<ClearSale>>", lambda e: self.limpiar_venta())
         # Conectar evento de artículo varios
         self.sale_form.bind("<<AddVarios>>", lambda e: self.add_varios())
         # Conectar evento de guardado del diálogo de edición (cantidad/precio)
@@ -218,6 +220,24 @@ class SaleController:
             if not self.items:
                 self.sale_form.edit_button.configure(state="disabled")
                 self.sale_form.delete_button.configure(state="disabled")
+
+    def limpiar_venta(self) -> None:
+        """Vacía por completo la venta en curso (F5): saca todos los
+        productos del carrito, sin tocar stock real (el temporal reservado
+        para esta venta simplemente se libera)."""
+        if not self.items:
+            return
+        if not messagebox.askyesno(
+                "Confirmar",
+                "¿Vaciar la venta en curso? Se van a quitar todos los "
+                "productos agregados."):
+            return
+        self.items = []
+        self.temp_stock = {}
+        self._update_table()
+        self._clear_form()
+        self.sale_form.edit_button.configure(state="disabled")
+        self.sale_form.delete_button.configure(state="disabled")
 
     def add_varios(self) -> None:
         """Agrega un artículo 'varios' sin registro en inventario."""
@@ -536,6 +556,11 @@ class SaleController:
 
             # Recién acá, con todo registrado sin errores, se confirma de una
             self.db.connection.commit()
+
+            numero_dia = self.db.get_numero_venta_del_dia(sale_id, date[:10])
+            self.sale_form.set_ultima_venta(
+                f"✓ Venta N° {numero_dia} del día registrada — "
+                f"Total ${total:.2f}")
 
             # Limpiar la venta
             self.items = []

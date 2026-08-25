@@ -28,6 +28,8 @@ class CajaController:
         self.caja_form.cerrar_button.configure(command=self.abrir_cierre)
         self.caja_form.tree.bind(
             '<Delete>', lambda e: self.eliminar_movimiento())
+        self.caja_form.eliminar_movimiento_button.configure(
+            command=self.eliminar_movimiento)
         self.caja_form.tree.bind(
             '<Double-1>', lambda e: self.editar_movimiento_seleccionado())
         self.caja_form.dia_anterior_button.configure(
@@ -88,11 +90,12 @@ class CajaController:
         self._actualizar_pantalla()
 
     def _totales_movimientos(self, movimientos: list) -> dict:
-        """Suma los movimientos del día, separando los gastos según cómo se
-        pagaron: solo el gasto en efectivo sale de la caja física, uno
-        pagado por transferencia (o directamente del bolsillo del dueño)
-        no la toca. El ingreso es plata que el dueño mete a la caja sin
-        que sea una venta (ej. para tener cambio)."""
+        """Suma los movimientos del día, separando los gastos y cobros
+        según cómo se pagaron: solo lo que es en efectivo mueve la caja
+        física, lo pagado/cobrado por transferencia (o posnet, para
+        cobros) no la toca. El ingreso es plata que el dueño mete a la
+        caja sin que sea una venta (ej. para tener cambio). El cobro es
+        cuando un cliente paga una venta que había quedado fiada."""
         gastos_efectivo = sum(
             float(m['monto']) for m in movimientos
             if m['tipo'] == 'gasto' and m['forma_pago'] == 'efectivo')
@@ -105,31 +108,48 @@ class CajaController:
             float(m['monto']) for m in movimientos if m['tipo'] == 'bolsillo')
         total_ingresos = sum(
             float(m['monto']) for m in movimientos if m['tipo'] == 'ingreso')
+        cobros_efectivo = sum(
+            float(m['monto']) for m in movimientos
+            if m['tipo'] == 'cobro' and m['forma_pago'] == 'efectivo')
+        cobros_transferencia = sum(
+            float(m['monto']) for m in movimientos
+            if m['tipo'] == 'cobro' and m['forma_pago'] == 'transferencia')
+        cobros_posnet = sum(
+            float(m['monto']) for m in movimientos
+            if m['tipo'] == 'cobro' and m['forma_pago'] == 'posnet')
+        total_cobros = cobros_efectivo + cobros_transferencia + cobros_posnet
         return {
             'gastos_efectivo': gastos_efectivo,
             'gastos_transferencia': gastos_transferencia,
             'total_retiros': total_retiros,
             'total_bolsillo': total_bolsillo,
             'total_ingresos': total_ingresos,
+            'cobros_efectivo': cobros_efectivo,
+            'cobros_transferencia': cobros_transferencia,
+            'cobros_posnet': cobros_posnet,
+            'total_cobros': total_cobros,
         }
 
     def _calcular_efectivo_esperado(self, sesion, movimientos, ventas) -> float:
         totales = self._totales_movimientos(movimientos)
         return (float(sesion['fondo_inicial']) + ventas['efectivo']
-                + totales['total_ingresos']
+                + totales['total_ingresos'] + totales['cobros_efectivo']
                 - totales['gastos_efectivo'] - totales['total_retiros'])
 
     def _calcular_resultado_dia(self, movimientos, ventas) -> float:
         """Cuánto se ganó hoy en limpio: todo lo vendido y cobrado (no
-        cuenta fiado, todavía no entró esa plata) menos todo lo que salió
-        por gastos y retiros (no cuenta bolsillo, no es plata del negocio).
-        """
+        cuenta fiado sin cobrar todavía) más lo que se cobró hoy de ventas
+        que habían quedado fiadas antes, menos los gastos reales del
+        negocio. Ni el retiro ni el bolsillo restan acá: el retiro es el
+        dueño sacando de la caja plata que el negocio ya ganó (no es un
+        gasto, solo mueve esa ganancia a su bolsillo), y el bolsillo del
+        dueño tampoco es plata del negocio."""
         totales = self._totales_movimientos(movimientos)
         total_vendido = (
-            ventas['efectivo'] + ventas['transferencia'] + ventas['posnet'])
+            ventas['efectivo'] + ventas['transferencia'] + ventas['posnet']
+            + totales['total_cobros'])
         total_egresos = (
-            totales['gastos_efectivo'] + totales['gastos_transferencia']
-            + totales['total_retiros'])
+            totales['gastos_efectivo'] + totales['gastos_transferencia'])
         return total_vendido - total_egresos
 
     def _actualizar_pantalla(self) -> None:
@@ -160,10 +180,10 @@ class CajaController:
             {'fondo_inicial': fondo_inicial}, movimientos, ventas)
         resultado_dia = self._calcular_resultado_dia(movimientos, ventas)
         total_ventas_dia = (
-            ventas['efectivo'] + ventas['transferencia'] + ventas['posnet'])
+            ventas['efectivo'] + ventas['transferencia'] + ventas['posnet']
+            + totales['total_cobros'])
         total_gastos_dia = (
-            totales['gastos_efectivo'] + totales['gastos_transferencia']
-            + totales['total_retiros'])
+            totales['gastos_efectivo'] + totales['gastos_transferencia'])
 
         # Un día sin sesión (nunca se abrió la caja ese día) o ya cerrado
         # queda como consulta. Un día abierto (hoy, o uno anterior que
@@ -194,6 +214,7 @@ class CajaController:
             'total_retiros': totales['total_retiros'],
             'total_bolsillo': totales['total_bolsillo'],
             'total_ingresos': totales['total_ingresos'],
+            'total_cobros': totales['total_cobros'],
             'efectivo_esperado': efectivo_esperado,
             'cerrada': cerrada,
             'bloqueada': bloqueada,
@@ -226,12 +247,15 @@ class CajaController:
         data = self.caja_form.get_movimiento_data()
 
         descripcion = data['descripcion']
-        if not descripcion:
-            if data['tipo'] == 'retiro':
-                # El retiro no necesita explicación como un gasto puntual.
-                descripcion = 'Retiro'
-            elif data['tipo'] == 'ingreso':
+        if data['tipo'] == 'retiro':
+            # El retiro no pide descripción en el formulario (el campo ni
+            # se muestra): siempre queda como "Retiro".
+            descripcion = 'Retiro'
+        elif not descripcion:
+            if data['tipo'] == 'ingreso':
                 descripcion = 'Ingreso'
+            elif data['tipo'] == 'cobro':
+                descripcion = 'Cobro de fiado'
             else:
                 messagebox.showerror("Error", "Ingrese una descripción")
                 return
@@ -243,10 +267,13 @@ class CajaController:
             messagebox.showerror("Error", "Ingrese un monto válido")
             return
 
-        # La forma de pago solo aplica a gastos (retiro y bolsillo siempre
-        # son "no efectivo desde la caja" o "efectivo", respectivamente,
-        # por definición).
-        forma_pago = data['forma_pago'] if data['tipo'] == 'gasto' else 'efectivo'
+        # La forma de pago aplica a gastos y cobros (retiro y bolsillo
+        # siempre son "no efectivo desde la caja" o "efectivo",
+        # respectivamente, por definición; el ingreso también queda fijo
+        # en efectivo, es plata que el dueño mete a la caja física).
+        forma_pago = (
+            data['forma_pago'] if data['tipo'] in ('gasto', 'cobro')
+            else 'efectivo')
 
         self.db.add_caja_movimiento(
             self.sesion['id'], data['tipo'], descripcion, monto, forma_pago)
@@ -266,7 +293,8 @@ class CajaController:
         if movimiento is None:
             return
         self.caja_form.show_editar_movimiento_dialog(
-            movimiento, self._guardar_edicion_movimiento)
+            movimiento, self._guardar_edicion_movimiento,
+            self._eliminar_movimiento_por_id)
 
     def _guardar_edicion_movimiento(
             self, movimiento_id: int, descripcion: str, monto: float,
@@ -281,11 +309,18 @@ class CajaController:
         selected = self.caja_form.tree.selection()
         if not selected:
             return
+        self._eliminar_movimiento_por_id(int(selected[0]))
+
+    def _eliminar_movimiento_por_id(self, movimiento_id: int) -> bool:
+        """Borra un movimiento tras confirmar. Devuelve True si se borró,
+        para que quien llama (la tabla o el diálogo de edición) sepa si
+        debe cerrarse/refrescar."""
         if not messagebox.askyesno(
                 "Confirmar", "¿Eliminar este movimiento?"):
-            return
-        self.db.delete_caja_movimiento(int(selected[0]))
+            return False
+        self.db.delete_caja_movimiento(movimiento_id)
         self.refresh()
+        return True
 
     def abrir_cierre(self) -> None:
         if not self._puede_editar():

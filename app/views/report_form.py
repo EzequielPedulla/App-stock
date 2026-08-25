@@ -1,8 +1,20 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from tkinter import messagebox
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+
+from ..utils import formatear_fecha_hora
+
+METODO_PAGO_LABELS = {
+    'efectivo': 'Efectivo',
+    'transferencia': 'Transferencia',
+    'posnet': 'Posnet',
+    'fiado': 'Fiado',
+    'mixto': 'Mixto',
+}
 
 
 class ReportForm(ttk.Frame):
@@ -11,7 +23,14 @@ class ReportForm(ttk.Frame):
         self.pack(fill=BOTH, expand=True)
         self.canvas_widget = None  # Para almacenar el canvas del gráfico
         self.report_controller = None  # Se establecerá desde el controlador
+        self._ventas = []  # Última lista completa recibida, para filtrar sin ir a la base
+        self._filtro_metodo = 'todos'
+        # Día que se está mirando en el historial ('YYYY-MM-DD').
+        self._dia_filtro = self._hoy_str()
         self._create_widgets()
+
+    def _hoy_str(self) -> str:
+        return datetime.now().strftime('%Y-%m-%d')
 
     def _create_widgets(self):
         # Título y botones de exportación
@@ -59,15 +78,17 @@ class ReportForm(ttk.Frame):
         top_cards = ttk.Frame(self)
         top_cards.pack(fill=X, pady=(0, 20))
 
-        # Card: Total de ventas
+        # Card: Total de ventas del día elegido (misma lógica que Caja: no
+        # cuenta fiado, todavía no se cobró esa plata).
         card_total = ttk.Frame(top_cards, bootstyle="light", padding=20)
         card_total.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 10))
 
-        ttk.Label(
+        self.card_total_titulo = ttk.Label(
             card_total,
             text="Total de ventas",
             font=("Segoe UI", 14)
-        ).pack(anchor=W)
+        )
+        self.card_total_titulo.pack(anchor=W)
 
         self.label_total_ventas = ttk.Label(
             card_total,
@@ -77,23 +98,25 @@ class ReportForm(ttk.Frame):
         )
         self.label_total_ventas.pack(anchor=W, pady=(10, 0))
 
-        # Card: Última venta
-        card_ultima = ttk.Frame(top_cards, bootstyle="light", padding=20)
-        card_ultima.pack(side=RIGHT, fill=BOTH, expand=True, padx=(10, 0))
+        # Card: Cantidad de ventas del día elegido (mismo criterio: no
+        # cuenta fiado).
+        card_cantidad = ttk.Frame(top_cards, bootstyle="light", padding=20)
+        card_cantidad.pack(side=RIGHT, fill=BOTH, expand=True, padx=(10, 0))
 
-        ttk.Label(
-            card_ultima,
-            text="Última venta",
+        self.card_cantidad_titulo = ttk.Label(
+            card_cantidad,
+            text="Cantidad de ventas",
             font=("Segoe UI", 14)
-        ).pack(anchor=W)
+        )
+        self.card_cantidad_titulo.pack(anchor=W)
 
-        self.label_ultima_venta = ttk.Label(
-            card_ultima,
-            text="$0",
+        self.label_cantidad_ventas = ttk.Label(
+            card_cantidad,
+            text="0",
             font=("Segoe UI", 31, "bold"),
             bootstyle="info"
         )
-        self.label_ultima_venta.pack(anchor=W, pady=(10, 0))
+        self.label_cantidad_ventas.pack(anchor=W, pady=(10, 0))
 
         # Container para gráfico y tabla
         bottom_container = ttk.Frame(self)
@@ -120,11 +143,69 @@ class ReportForm(ttk.Frame):
         card_tabla = ttk.Frame(bottom_container, bootstyle="light", padding=20)
         card_tabla.pack(side=TOP, fill=BOTH, expand=True)
 
+        # ===== Navegación por día: el historial se ve un día a la vez
+        # (arranca en hoy), con flechas para ir para atrás/adelante. =====
+        dia_nav_row = ttk.Frame(card_tabla)
+        dia_nav_row.pack(fill=X, pady=(0, 10))
+
+        self.dia_anterior_button = ttk.Button(
+            dia_nav_row, text="◀ Día anterior", bootstyle="secondary",
+            width=14, command=self._ir_dia_anterior)
+        self.dia_anterior_button.pack(side=LEFT)
+        self.dia_label = ttk.Label(
+            dia_nav_row, text="Hoy", font=("Segoe UI", 14, "bold"))
+        self.dia_label.pack(side=LEFT, padx=15)
+        self.dia_siguiente_button = ttk.Button(
+            dia_nav_row, text="Día siguiente ▶", bootstyle="secondary",
+            width=14, command=self._ir_dia_siguiente)
+        self.dia_siguiente_button.pack(side=LEFT)
+        self.volver_hoy_button = ttk.Button(
+            dia_nav_row, text="Volver a hoy", bootstyle="info", width=12,
+            command=self._volver_a_hoy)
+        # Se muestra/oculta según el día (ver _actualizar_dia_label).
+
+        # ===== Resumen de ventas por método de pago del día: cuenta
+        # cuántos pagos se hicieron con cada método y cuánto sumaron, con
+        # la misma lógica que Caja (una venta con pago dividido se reparte
+        # entre los métodos reales que la componen), para que los números
+        # de las dos pantallas siempre coincidan. =====
+        resumen_metodos_row = ttk.Frame(card_tabla)
+        resumen_metodos_row.pack(fill=X, pady=(0, 15))
+
+        self.resumen_metodo_labels = {}
+        for metodo in ('efectivo', 'transferencia', 'posnet', 'fiado'):
+            card = ttk.Frame(resumen_metodos_row, bootstyle="light", padding=10)
+            card.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 8))
+            ttk.Label(
+                card, text=METODO_PAGO_LABELS[metodo],
+                font=("Segoe UI", 11, "bold")
+            ).pack(anchor=W)
+            lbl = ttk.Label(card, text="0 pagos — $0.00", font=("Segoe UI", 11))
+            lbl.pack(anchor=W, pady=(4, 0))
+            self.resumen_metodo_labels[metodo] = lbl
+
+        tabla_header = ttk.Frame(card_tabla)
+        tabla_header.pack(fill=X, pady=(0, 15))
+
         ttk.Label(
-            card_tabla,
+            tabla_header,
             text="Historial de ventas",
             font=("Segoe UI", 16, "bold")
-        ).pack(anchor=W, pady=(0, 15))
+        ).pack(side=LEFT)
+
+        filtro_frame = ttk.Frame(tabla_header)
+        filtro_frame.pack(side=RIGHT)
+        ttk.Label(
+            filtro_frame, text="Método de pago:", font=("Segoe UI", 12)
+        ).pack(side=LEFT, padx=(0, 8))
+        self.filtro_metodo_combo = ttk.Combobox(
+            filtro_frame, state="readonly", width=16, font=("Segoe UI", 12),
+            values=["Todos", "Efectivo", "Transferencia", "Posnet", "Fiado",
+                    "Mixto"])
+        self.filtro_metodo_combo.current(0)
+        self.filtro_metodo_combo.pack(side=LEFT)
+        self.filtro_metodo_combo.bind(
+            '<<ComboboxSelected>>', self._on_filtro_metodo_changed)
 
         # Configurar estilo para la tabla de ventas
         style = ttk.Style()
@@ -142,8 +223,9 @@ class ReportForm(ttk.Frame):
         table_container = ttk.Frame(card_tabla)
         table_container.pack(fill=BOTH, expand=True)
 
-        # Tabla de ventas (solo fecha y total, el ID se guarda oculto)
-        columns = ("id", "fecha", "total")
+        # Tabla de ventas (fecha, método de pago y total; el ID global va
+        # oculto)
+        columns = ("id", "fecha", "metodo", "total")
         self.tabla_ventas = ttk.Treeview(
             table_container,
             columns=columns,
@@ -157,9 +239,11 @@ class ReportForm(ttk.Frame):
         self.tabla_ventas.column("id", width=0, stretch=False)
 
         self.tabla_ventas.heading("fecha", text="Fecha", anchor=W)
+        self.tabla_ventas.heading("metodo", text="Método de pago", anchor=CENTER)
         self.tabla_ventas.heading("total", text="Total", anchor=E)
 
         self.tabla_ventas.column("fecha", width=170, anchor=W)
+        self.tabla_ventas.column("metodo", width=150, anchor=CENTER)
         self.tabla_ventas.column("total", width=110, anchor=E)
 
         # Colores alternados
@@ -174,11 +258,62 @@ class ReportForm(ttk.Frame):
         self.tabla_ventas.pack(side=LEFT, fill=BOTH, expand=True)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-    def update_data(self, total_ventas=0, ultima_venta=0, productos_vendidos=None, ultimas_ventas=None):
+        self._actualizar_dia_label()
+
+    def _ir_dia_anterior(self) -> None:
+        fecha = datetime.strptime(self._dia_filtro, '%Y-%m-%d') - timedelta(days=1)
+        self._dia_filtro = fecha.strftime('%Y-%m-%d')
+        self._actualizar_dia_label()
+        self._render_ventas()
+
+    def _ir_dia_siguiente(self) -> None:
+        if self._dia_filtro >= self._hoy_str():
+            return
+        fecha = datetime.strptime(self._dia_filtro, '%Y-%m-%d') + timedelta(days=1)
+        self._dia_filtro = fecha.strftime('%Y-%m-%d')
+        self._actualizar_dia_label()
+        self._render_ventas()
+
+    def _volver_a_hoy(self) -> None:
+        self._dia_filtro = self._hoy_str()
+        self._actualizar_dia_label()
+        self._render_ventas()
+
+    def _texto_dia(self, fecha_str: str) -> str:
+        es_hoy = fecha_str == self._hoy_str()
+        anio, mes, dia = fecha_str.split('-')
+        return f"Hoy ({dia}/{mes})" if es_hoy else f"{dia}/{mes}/{anio}"
+
+    def _actualizar_dia_label(self) -> None:
+        """Actualiza el texto del día mostrado y si tiene sentido seguir
+        avanzando (no se puede ir más adelante que hoy)."""
+        es_hoy = self._dia_filtro == self._hoy_str()
+        self.dia_label.configure(text=self._texto_dia(self._dia_filtro))
+        self.dia_siguiente_button.configure(
+            state='disabled' if es_hoy else 'normal')
+        if es_hoy:
+            self.volver_hoy_button.pack_forget()
+        else:
+            self.volver_hoy_button.pack(side=LEFT, padx=(15, 0))
+
+    def _actualizar_resumen_dia(self) -> None:
+        """Total vendido y cantidad de ventas del día elegido, con la
+        misma lógica que usa Caja (no cuenta fiado en el total vendido),
+        para que las dos pantallas siempre coincidan."""
+        if not self.report_controller:
+            return
+        resumen = self.report_controller.get_resumen_dia(self._dia_filtro)
+        dia_texto = self._texto_dia(self._dia_filtro)
+        self.label_total_ventas.configure(
+            text=f"${resumen['total_ventas']:,.2f}")
+        self.card_total_titulo.configure(text=f"Total de ventas — {dia_texto}")
+        cantidad = resumen['cantidad_ventas']
+        self.label_cantidad_ventas.configure(text=f"{cantidad}")
+        self.card_cantidad_titulo.configure(
+            text=f"Cantidad de ventas — {dia_texto}")
+
+    def update_data(self, productos_vendidos=None, ultimas_ventas=None):
         """Actualiza los datos mostrados en los reportes"""
-        # Actualizar cards
-        self.label_total_ventas.configure(text=f"${total_ventas:,.2f}")
-        self.label_ultima_venta.configure(text=f"${ultima_venta:,.2f}")
 
         # Actualizar gráfico de productos más vendidos
         if productos_vendidos:
@@ -186,43 +321,90 @@ class ReportForm(ttk.Frame):
         else:
             self._update_grafico([])
 
-        # Actualizar tabla de últimas ventas
-        if ultimas_ventas:
-            # Limpiar tabla
-            for item in self.tabla_ventas.get_children():
-                self.tabla_ventas.delete(item)
+        # Guardar la lista completa para poder filtrar sin volver a consultar
+        self._ventas = ultimas_ventas or []
+        self._render_ventas()
 
-            # Insertar ventas
-            for i, venta in enumerate(ultimas_ventas):
-                # Formatear la fecha (solo fecha y hora, sin microsegundos)
-                fecha_str = str(venta['date'])
-                if len(fecha_str) > 19:
-                    fecha_str = fecha_str[:19]
+    def _ventas_del_dia_filtrado(self) -> list:
+        """Ventas que corresponden al día elegido en la navegación."""
+        return [
+            v for v in self._ventas
+            if str(v['date'])[:10] == self._dia_filtro]
 
-                # Determinar el tag según el estado
-                status = venta.get('status', 'active')
-                if status == 'cancelled':
-                    tag = 'cancelled'
-                    total_text = f"${venta['total']:.2f} [ANULADA]"
-                else:
-                    tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-                    total_text = f"${venta['total']:.2f}"
+    def _render_ventas(self) -> None:
+        """Vuelca en la tabla las ventas del día elegido que además
+        coincidan con el filtro de método de pago, y actualiza el resumen
+        por método (que ignora ese filtro: siempre muestra los cuatro,
+        para poder compararlos)."""
+        for item in self.tabla_ventas.get_children():
+            self.tabla_ventas.delete(item)
 
-                self.tabla_ventas.insert(
-                    "", END,
-                    values=(venta['id'], fecha_str, total_text),
-                    tags=(tag,)
-                )
-            
-            # Configurar estilo para ventas anuladas
-            self.tabla_ventas.tag_configure('cancelled', background='#ffcccc', foreground='#cc0000')
+        ventas_dia = self._ventas_del_dia_filtrado()
 
-    def show_sale_detail(self, sale_id, sale_date, sale_total, details):
+        if self._filtro_metodo == 'todos':
+            ventas = ventas_dia
+        else:
+            ventas = [
+                v for v in ventas_dia
+                if v.get('payment_method', 'efectivo') == self._filtro_metodo]
+
+        for i, venta in enumerate(ventas):
+            fecha_str = formatear_fecha_hora(venta['date'])
+
+            metodo_texto = METODO_PAGO_LABELS.get(
+                venta.get('payment_method', 'efectivo'), 'Efectivo')
+
+            # Determinar el tag según el estado
+            status = venta.get('status', 'active')
+            if status == 'cancelled':
+                tag = 'cancelled'
+                total_text = f"${venta['total']:.2f} [ANULADA]"
+            else:
+                tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                total_text = f"${venta['total']:.2f}"
+
+            self.tabla_ventas.insert(
+                "", END,
+                values=(venta['id'], fecha_str, metodo_texto, total_text),
+                tags=(tag,)
+            )
+
+        # Configurar estilo para ventas anuladas
+        self.tabla_ventas.tag_configure(
+            'cancelled', background='#ffcccc', foreground='#cc0000')
+
+        self._actualizar_resumen_metodos()
+        self._actualizar_resumen_dia()
+
+    def _actualizar_resumen_metodos(self) -> None:
+        """Cuenta cuántos pagos se hicieron con cada método y cuánto
+        sumaron, para el día elegido. Se pide al controlador (que usa la
+        misma consulta que Caja) en vez de calcularlo acá con los datos en
+        caché, para que una venta con pago dividido ('mixto') se reparta
+        entre los métodos reales que la componen y los números de las dos
+        pantallas coincidan siempre."""
+        if not self.report_controller:
+            return
+        resumen = self.report_controller.get_resumen_metodos(self._dia_filtro)
+        for metodo, label in self.resumen_metodo_labels.items():
+            c = resumen.get(metodo, {'cantidad': 0, 'total': 0.0})
+            cantidad = c['cantidad']
+            texto_cant = "1 pago" if cantidad == 1 else f"{cantidad} pagos"
+            label.configure(text=f"{texto_cant} — ${c['total']:.2f}")
+
+    def _on_filtro_metodo_changed(self, event=None) -> None:
+        texto = self.filtro_metodo_combo.get()
+        etiqueta_a_valor = {v: k for k, v in METODO_PAGO_LABELS.items()}
+        self._filtro_metodo = etiqueta_a_valor.get(texto, 'todos')
+        self._render_ventas()
+
+    def show_sale_detail(self, sale_id, sale_date, sale_total,
+                          payment_method, details):
         """Muestra una ventana con el detalle de la venta"""
         # Crear ventana modal
         detail_window = ttk.Toplevel(self)
         detail_window.title(f"Detalle de Venta N° {sale_id}")
-        detail_window.geometry("940x720")
+        detail_window.geometry("940x780")
         detail_window.resizable(False, False)
         detail_window.transient(self)
         detail_window.grab_set()
@@ -254,6 +436,63 @@ class ReportForm(ttk.Frame):
             text=f"Fecha: {sale_date}",
             font=("Segoe UI", 14)
         ).pack(side=RIGHT)
+
+        # ===== Método de pago: se puede corregir por si se cargó mal al
+        # momento de la venta. Si estaba dividido ('mixto'), corregirlo a
+        # un método simple reemplaza el detalle dividido guardado aparte. =====
+        metodo_frame = ttk.Frame(main_frame, bootstyle="light", padding=12)
+        metodo_frame.pack(fill=X, pady=(0, 15))
+
+        metodo_top_row = ttk.Frame(metodo_frame)
+        metodo_top_row.pack(fill=X, pady=(0, 10))
+        ttk.Label(
+            metodo_top_row, text="Método de pago:", font=("Segoe UI", 13)
+        ).pack(side=LEFT, padx=(0, 10))
+
+        metodo_actual = {'valor': payment_method or 'efectivo'}
+        metodo_label = ttk.Label(
+            metodo_top_row,
+            text=METODO_PAGO_LABELS.get(metodo_actual['valor'], 'Efectivo'),
+            font=("Segoe UI", 13, "bold"))
+        metodo_label.pack(side=LEFT)
+
+        # Fila propia para los botones: así entran todos (4 métodos +
+        # Guardar) sin competir por espacio con la etiqueta de arriba.
+        botones_row = ttk.Frame(metodo_frame)
+        botones_row.pack(fill=X)
+
+        metodo_buttons = {}
+
+        def elegir_metodo(m):
+            metodo_actual['valor'] = m
+            for mm, b in metodo_buttons.items():
+                b.configure(bootstyle="primary" if mm == m else "secondary")
+
+        for m in ('efectivo', 'transferencia', 'posnet', 'fiado'):
+            btn = ttk.Button(
+                botones_row, text=METODO_PAGO_LABELS[m], width=13,
+                bootstyle="primary" if m == metodo_actual['valor']
+                else "secondary",
+                command=lambda m=m: elegir_metodo(m))
+            btn.pack(side=LEFT, padx=(0, 5))
+            metodo_buttons[m] = btn
+
+        def guardar_metodo():
+            nuevo = metodo_actual['valor']
+            if nuevo == payment_method:
+                return
+            if self.report_controller:
+                self.report_controller.update_sale_payment_method(
+                    sale_id, nuevo)
+            metodo_label.configure(text=METODO_PAGO_LABELS[nuevo])
+            messagebox.showinfo(
+                "Guardado",
+                f"Método de pago actualizado a {METODO_PAGO_LABELS[nuevo]}.")
+
+        ttk.Button(
+            botones_row, text="Guardar", bootstyle="success", width=10,
+            command=guardar_metodo
+        ).pack(side=LEFT, padx=(15, 0))
 
         # Tabla de productos
         ttk.Label(
@@ -344,7 +583,8 @@ class ReportForm(ttk.Frame):
             text="🎫 Exportar Ticket PDF",
             bootstyle="info",
             command=lambda: self._on_export_ticket_pdf(
-                sale_id, sale_date, sale_total, details
+                sale_id, sale_date, metodo_actual['valor'], sale_total,
+                details
             ),
             width=20
         ).pack(side=LEFT, padx=5)
@@ -478,7 +718,8 @@ class ReportForm(ttk.Frame):
         if self.report_controller:
             self.report_controller.export_inventory_to_excel()
 
-    def _on_export_ticket_pdf(self, sale_id, sale_date, sale_total, details):
+    def _on_export_ticket_pdf(
+            self, sale_id, sale_date, payment_method, sale_total, details):
         """Maneja el clic en el botón de exportar ticket de venta"""
         if self.report_controller:
             # Obtener datos completos de la venta
@@ -491,7 +732,8 @@ class ReportForm(ttk.Frame):
                 sale_paid = float(result[0]['paid'])
                 sale_change = float(result[0]['change'])
                 self.report_controller.export_sale_ticket_to_pdf(
-                    sale_id, sale_date, sale_total, sale_paid, sale_change, details
+                    sale_id, sale_date, payment_method, sale_total,
+                    sale_paid, sale_change, details
                 )
 
     def _on_cancel_sale(self, sale_id, detail_window):

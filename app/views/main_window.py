@@ -188,3 +188,5 @@ class MainWindow(ttk.Window):
         self.caja_frame.pack_forget()
         self.reports_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Reportes")
+        if getattr(self.report_form, 'report_controller', None):
+            self.report_form.report_controller.refresh()

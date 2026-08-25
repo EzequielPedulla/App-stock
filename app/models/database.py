@@ -340,14 +340,41 @@ class Database:
         self.connection.commit()
 
     def get_caja_movimientos(self, sesion_id: int) -> list:
+        """Devuelve los movimientos del día, el más reciente primero (el
+        cargado hace rato queda al final de la lista)."""
         return self.execute_query(
-            "SELECT * FROM caja_movimientos WHERE sesion_id = ? ORDER BY id",
+            "SELECT * FROM caja_movimientos WHERE sesion_id = ? ORDER BY id DESC",
             (sesion_id,)
         )
 
     def delete_caja_movimiento(self, movimiento_id: int) -> None:
         self.cursor.execute(
             "DELETE FROM caja_movimientos WHERE id = ?", (movimiento_id,))
+        self.connection.commit()
+
+    def get_numero_venta_del_dia(self, sale_id: int, fecha_dia: str) -> int:
+        """Número de orden de una venta dentro de su día (1, 2, 3...), según
+        el orden en que se cargaron (por id). No cambia si esa venta u otra
+        del mismo día se anula después: se cuenta el lugar que ocupó al
+        crearse, no cuántas siguen activas."""
+        result = self.execute_query(
+            "SELECT COUNT(*) as n FROM sales WHERE date LIKE ? AND id <= ?",
+            (f"{fecha_dia}%", sale_id)
+        )
+        return int(result[0]['n']) if result else 1
+
+    def update_sale_payment_method(self, sale_id: int, payment_method: str) -> None:
+        """Corrige el método de pago de una venta ya cargada (por si se
+        cargó mal al momento de la venta). Solo admite pasar a un método
+        simple (no a 'mixto'): si la venta tenía un pago dividido, se
+        borran sus filas de sale_payments para que no se sigan sumando
+        aparte en get_ventas_totales_por_metodo."""
+        self.cursor.execute(
+            "UPDATE sales SET payment_method = ? WHERE id = ?",
+            (payment_method, sale_id)
+        )
+        self.cursor.execute(
+            "DELETE FROM sale_payments WHERE sale_id = ?", (sale_id,))
         self.connection.commit()
 
     def get_ventas_totales_por_metodo(self, fecha: str) -> dict:
@@ -386,6 +413,78 @@ class Database:
             totales[metodo] = totales.get(metodo, 0.0) + float(row['total'])
 
         return totales
+
+    def get_ventas_conteo_por_metodo(self, fecha: str) -> dict:
+        """Igual que get_ventas_totales_por_metodo, pero además cuenta
+        cuántos pagos se hicieron con cada método (Reportes lo usa para el
+        resumen del día). Una venta 'mixto' cuenta como un pago por cada
+        método que usó, no como una venta entera de un solo método: así
+        el resumen queda consistente con cómo Caja separa el efectivo real
+        de una venta dividida del resto."""
+        resumen = {
+            'efectivo': {'cantidad': 0, 'total': 0.0},
+            'transferencia': {'cantidad': 0, 'total': 0.0},
+            'posnet': {'cantidad': 0, 'total': 0.0},
+            'fiado': {'cantidad': 0, 'total': 0.0},
+        }
+
+        result = self.execute_query(
+            """SELECT payment_method, COUNT(*) as cantidad,
+                      COALESCE(SUM(total), 0) as total
+               FROM sales
+               WHERE status = 'active' AND date LIKE ? AND payment_method != 'mixto'
+               GROUP BY payment_method""",
+            (f"{fecha}%",)
+        )
+        for row in result:
+            metodo = row['payment_method']
+            if metodo in resumen:
+                resumen[metodo]['cantidad'] = int(row['cantidad'])
+                resumen[metodo]['total'] = float(row['total'])
+
+        divididos = self.execute_query(
+            """SELECT sp.payment_method, COUNT(*) as cantidad,
+                      COALESCE(SUM(sp.amount), 0) as total
+               FROM sale_payments sp
+               JOIN sales s ON s.id = sp.sale_id
+               WHERE s.status = 'active' AND s.date LIKE ?
+               GROUP BY sp.payment_method""",
+            (f"{fecha}%",)
+        )
+        for row in divididos:
+            metodo = row['payment_method']
+            if metodo not in resumen:
+                resumen[metodo] = {'cantidad': 0, 'total': 0.0}
+            resumen[metodo]['cantidad'] += int(row['cantidad'])
+            resumen[metodo]['total'] += float(row['total'])
+
+        return resumen
+
+    def get_total_cobros_dia(self, fecha: str) -> float:
+        """Total cobrado en el día por ventas que habían quedado fiadas
+        (cualquier forma de pago). Se une por caja_sesiones.fecha (no por
+        la fecha/hora cruda del movimiento) porque un movimiento cargado
+        mientras se edita un día anterior sin cerrar queda con la marca de
+        tiempo real de cuando se cargó, no la del día de esa sesión."""
+        result = self.execute_query(
+            """SELECT COALESCE(SUM(cm.monto), 0) as total
+               FROM caja_movimientos cm
+               JOIN caja_sesiones cs ON cs.id = cm.sesion_id
+               WHERE cm.tipo = 'cobro' AND cs.fecha = ?""",
+            (fecha,)
+        )
+        return float(result[0]['total']) if result else 0.0
+
+    def get_cantidad_ventas_dia(self, fecha: str) -> int:
+        """Cantidad de ventas activas (no anuladas) de un día que ya se
+        cobraron (no cuenta fiado: todavía no entró esa plata), para que
+        coincida con el mismo criterio que el total vendido."""
+        result = self.execute_query(
+            """SELECT COUNT(*) as n FROM sales
+               WHERE status = 'active' AND date LIKE ? AND payment_method != 'fiado'""",
+            (f"{fecha}%",)
+        )
+        return int(result[0]['n']) if result else 0
 
     def __del__(self):
         # No cerrar la conexión en el destructor ya que es compartida

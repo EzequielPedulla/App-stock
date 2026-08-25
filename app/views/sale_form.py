@@ -233,10 +233,22 @@ class SaleForm(ttk.Frame):
         )
         self.confirm_button.pack(side=tk.RIGHT)
 
+        # Aviso de la última venta confirmada (con su número del día), para
+        # que quede visible sin interrumpir con un popup en cada cobro.
+        self.ultima_venta_label = ttk.Label(
+            self,
+            text="",
+            font=("Segoe UI", 12, "bold"),
+            bootstyle="success"
+        )
+        self.ultima_venta_label.pack(anchor=tk.E, pady=(5, 0))
+
         # Vincular la tecla Enter a la ventana principal
         self.bind_all('<Return>', self._on_enter_pressed)
         # F10 para agregar un artículo Varios sin tocar el mouse
         self.bind_all('<F10>', self._on_f10_pressed)
+        # F5 para vaciar la venta en curso (carrito) de una
+        self.bind_all('<F5>', self._on_f5_pressed)
         # Ctrl+1/2/3 para cambiar entre las ventas en curso
         for i in range(3):
             self.bind_all(f'<Control-Key-{i + 1}>',
@@ -247,6 +259,12 @@ class SaleForm(ttk.Frame):
         visible (F10 está en bind_all, que es global a toda la app)."""
         if self.winfo_ismapped():
             self._show_varios_dialog()
+
+    def _on_f5_pressed(self, event) -> None:
+        """Vacía la venta en curso con F5, solo si esta pestaña está
+        visible (bind_all es global a toda la app)."""
+        if self.winfo_ismapped():
+            self.event_generate("<<ClearSale>>")
 
     def _on_switch_slot_shortcut(self, index: int) -> None:
         """Genera el evento de cambio de venta con Ctrl+1/2/3, solo si esta
@@ -639,6 +657,11 @@ class SaleForm(ttk.Frame):
         # Verificar si hay productos en la tabla
         if self.tree.get_children():
             self._show_payment_dialog()
+
+    def set_ultima_venta(self, texto: str) -> None:
+        """Muestra el aviso de la última venta confirmada (número del día
+        y total)."""
+        self.ultima_venta_label.configure(text=texto)
 
     def get_item_data(self) -> dict:
         """Obtiene los datos del formulario."""

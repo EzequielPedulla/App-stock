@@ -35,18 +35,28 @@ class ReportController:
 
     def refresh(self) -> None:
         """Actualiza todos los datos de los reportes."""
-        total = self._get_total_ventas()
-        ultima = self._get_ultima_venta()
         ultimas = self._get_ultimas_ventas()
         mas_vendidos = self._get_productos_mas_vendidos()
 
         self.report_form.update_data(
-            total_ventas=total,
-            ultima_venta=ultima,
             ultimas_ventas=ultimas,
             productos_vendidos=mas_vendidos
         )
         self.report_form.update_idletasks()
+
+    def get_resumen_dia(self, fecha: str) -> dict:
+        """Total vendido y cantidad de ventas de un día, con la misma
+        lógica que Caja: el total vendido no cuenta fiado sin cobrar, pero
+        sí suma lo que se cobró ese día de ventas que habían quedado
+        fiadas antes (movimientos de tipo 'cobro' en Caja), para que la
+        tarjeta de Reportes coincida siempre con la de Caja."""
+        metodos = self.db.get_ventas_conteo_por_metodo(fecha)
+        total_ventas = (
+            metodos['efectivo']['total'] + metodos['transferencia']['total']
+            + metodos['posnet']['total']
+            + self.db.get_total_cobros_dia(fecha))
+        cantidad_ventas = self.db.get_cantidad_ventas_dia(fecha)
+        return {'total_ventas': total_ventas, 'cantidad_ventas': cantidad_ventas}
 
     def _get_total_ventas(self) -> float:
         """
@@ -78,12 +88,19 @@ class ReportController:
             list: Lista de ventas con sus datos
         """
         query = """
-            SELECT id, date, total, paid, `change`, status
+            SELECT id, date, total, paid, `change`, status, payment_method
             FROM sales
             ORDER BY date DESC
         """
         result = self.db.execute_query(query)
         return result if result else []
+
+    def get_resumen_metodos(self, fecha: str) -> dict:
+        """Cantidad de pagos y total por método de pago para un día, con
+        la misma lógica que usa Caja (una venta 'mixto' se reparte entre
+        los métodos reales que la componen, no queda como su propia
+        categoría) para que los dos números coincidan siempre."""
+        return self.db.get_ventas_conteo_por_metodo(fecha)
 
     def _get_productos_mas_vendidos(self) -> list[dict[str, Any]]:
         """
@@ -93,11 +110,13 @@ class ReportController:
             list: Lista de productos con estadísticas de ventas
         """
         query = """
-            SELECT p.name as producto, 
+            SELECT p.name as producto,
                    SUM(sd.quantity) as cantidad_vendida,
                    SUM(sd.quantity * sd.unit_price) as monto_total
             FROM sale_details sd
             JOIN products p ON sd.product_id = p.id
+            JOIN sales s ON s.id = sd.sale_id
+            WHERE s.status = 'active'
             GROUP BY p.id, p.name
             ORDER BY cantidad_vendida DESC
             LIMIT 10
@@ -141,20 +160,34 @@ class ReportController:
         item = self.report_form.tabla_ventas.item(selected[0])
         sale_id = item['values'][0]  # El ID está en la primera columna
         sale_date = item['values'][1]
-        sale_total_str = item['values'][2]  # Viene como "$X.XX"
+        sale_total_str = item['values'][3]  # Viene como "$X.XX"
 
         # Extraer el valor numérico del total (quitar el $ y convertir)
         sale_total = float(sale_total_str.replace('$', '').replace(',', ''))
+
+        # Método de pago actual: se consulta a la base (no el texto de la
+        # tabla) para tener siempre el valor crudo ('efectivo', 'mixto', etc.)
+        result = self.db.execute_query(
+            "SELECT payment_method FROM sales WHERE id = ?", (sale_id,))
+        payment_method = result[0]['payment_method'] if result else 'efectivo'
 
         # Obtener los detalles de la venta
         details = self._get_sale_details(sale_id)
 
         if details:
             self.report_form.show_sale_detail(
-                sale_id, sale_date, sale_total, details)
+                sale_id, sale_date, sale_total, payment_method, details)
         else:
             messagebox.showinfo(
                 "Sin detalles", "No se encontraron detalles para esta venta.")
+
+    def update_sale_payment_method(self, sale_id: int, payment_method: str) -> None:
+        """Corrige el método de pago de una venta (por si se cargó mal al
+        momento de la venta). Refresca reportes para que el cambio se vea
+        reflejado en los totales por método (y en Caja al volver a esa
+        pantalla, que lee siempre de la base)."""
+        self.db.update_sale_payment_method(sale_id, payment_method)
+        self.refresh()
 
     def export_sales_to_excel(self) -> None:
         """Exporta el historial de ventas a Excel."""
@@ -240,6 +273,7 @@ class ReportController:
         self,
         sale_id: int,
         sale_date: str,
+        payment_method: str,
         sale_total: float,
         sale_paid: float,
         sale_change: float,
@@ -251,6 +285,7 @@ class ReportController:
         Args:
             sale_id: ID de la venta
             sale_date: Fecha de la venta
+            payment_method: Método de pago de la venta
             sale_total: Total de la venta
             sale_paid: Monto pagado
             sale_change: Cambio entregado
@@ -258,7 +293,8 @@ class ReportController:
         """
         try:
             filename = self.export_service.export_sale_ticket_to_pdf(
-                sale_id, sale_date, sale_total, sale_paid, sale_change, details
+                sale_id, sale_date, payment_method, sale_total,
+                sale_paid, sale_change, details
             )
 
             if messagebox.askyesno(
