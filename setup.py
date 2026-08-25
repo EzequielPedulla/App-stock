@@ -7,6 +7,10 @@ setup(
     packages=find_packages(),
     install_requires=[
         "ttkbootstrap>=1.10.1",
+        "numpy==2.1.3",
+        "matplotlib>=3.7.0",
+        "reportlab>=4.0.0",
+        "openpyxl>=3.1.0",
     ],
     python_requires=">=3.8",
     author="Eze",

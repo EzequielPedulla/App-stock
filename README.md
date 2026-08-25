@@ -42,12 +42,13 @@
 git clone https://github.com/EzequielPedulla/App-stock.git
 cd App-stock
 
-# Crear entorno virtual
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Crear entorno virtual (Windows)
+py -3.13 -m venv venv
+source venv/Scripts/activate  # Git Bash
+# PowerShell: .\venv\Scripts\Activate.ps1
 
 # Instalar dependencias
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # Ejecutar aplicación (no requiere configuración adicional)
 python main.py

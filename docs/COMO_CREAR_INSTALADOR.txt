@@ -9,8 +9,18 @@ PASO 1: INSTALAR INNO SETUP
 
 PASO 2: GENERAR EL EJECUTABLE
 ------------------------------
-1. Desde la raíz del proyecto: pyinstaller App-Stock.spec
-2. Copie dist/App-Stock.exe a la carpeta installers/
+1. Desde la raíz del proyecto, cree y active un entorno limpio:
+    py -3.13 -m venv venv
+    source venv/Scripts/activate       (Git Bash)
+    .\venv\Scripts\Activate.ps1      (PowerShell)
+2. Instale las dependencias fijadas:
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt
+3. Confirme que NumPy carga antes de compilar:
+    python -c "import numpy; print(numpy.__version__)"
+    Debe mostrar: 2.1.3
+4. Desde la raíz del proyecto: pyinstaller --clean App-Stock.spec
+5. Copie dist/App-Stock.exe a la carpeta installers/
 
 PASO 3: CREAR INSTALADOR
 ------------------------
@@ -51,6 +61,53 @@ Si el instalador falla al compilar:
 1. Verifique que Inno Setup esté instalado y en el PATH (iscc)
 2. Verifique que installers/App-Stock.exe exista
 3. Revise los logs de Inno Setup
+
+========================================
+     DIAGNOSTICO DE NUMPY EN WINDOWS
+========================================
+
+Ejecute estos comandos en la PC donde falla, desde la raíz del proyecto y
+con el entorno virtual activado. Guarde toda la salida en un archivo:
+
+    python -c "import sys, platform; print(sys.version); print(platform.platform()); print(platform.machine())" > numpy-diagnostico.txt 2>&1
+    python -m pip show numpy >> numpy-diagnostico.txt 2>&1
+    python -c "import numpy" >> numpy-diagnostico.txt 2>&1
+
+El tercer comando debe terminar sin salida si el import funciona. Si falla,
+numpy-diagnostico.txt debe conservar el mensaje completo de DLL, incluyendo
+si Windows menciona una instruccion no valida o una dependencia ausente.
+
+Para probar la version fijada en un entorno limpio:
+
+    deactivate
+    rmdir /s /q venv                 (CMD; en Git Bash usar: rm -rf venv)
+    py -3.13 -m venv venv
+    source venv/Scripts/activate     (Git Bash)
+    python -m pip install -r requirements.txt
+    python -c "import numpy; print(numpy.__version__)"
+    python main.py
+
+Si NumPy 2.1.3 tambien falla, el diagnostico permite distinguir entre un
+problema de instrucciones del CPU y una DLL/runtime faltante. En ese caso no
+se debe volver a elegir una version a ciegas: conservar el archivo completo
+y probar la siguiente version compatible con Python 3.13 de forma aislada.
+
+CAUSA MAS PROBABLE Y FIX APLICADO:
+En CPUs viejas sin SSSE3/SSE4.1/AVX (ej. AMD Athlon II X2, familia K10), la
+deteccion automatica de CPU de OpenBLAS (bundled con numpy) puede elegir un
+kernel que usa instrucciones que el CPU no tiene, y numpy se cae al cargar
+_multiarray_umath. main.py ahora fija OPENBLAS_CORETYPE=generic antes de
+importar numpy/matplotlib, lo que fuerza un kernel BLAS generico y evita esa
+deteccion. Este fix aplica tanto corriendo desde codigo fuente como en el
+.exe compilado (main.py es el script de entrada en ambos casos).
+
+Para confirmar la causa manualmente sin tocar codigo, en la PC que falla:
+
+    OPENBLAS_CORETYPE=generic python -c "import numpy; print(numpy.__version__)"   (Git Bash)
+    $env:OPENBLAS_CORETYPE="generic"; python -c "import numpy"                      (PowerShell)
+
+Si esto imprime la version sin error, la causa es la deteccion de CPU de
+OpenBLAS y el fix en main.py la resuelve de forma permanente.
 
 ========================================
     VERSION: 1.0
