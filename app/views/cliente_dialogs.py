@@ -5,6 +5,8 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import messagebox
 
+from ..security import owner_lock, TAPADO
+
 
 def _centrar(dialog) -> None:
     dialog.update_idletasks()
@@ -65,8 +67,15 @@ def show_cliente_form(parent, on_save, cliente: dict = None) -> None:
     campo('dni', "DNI (opcional)", c.get('dni', ''))
     campo('direccion', "Dirección (opcional)", c.get('direccion', ''))
     limite = c.get('limite')
-    campo('limite', "Límite de fiado en $ (vacío = sin límite; solo avisa)",
-          f"{limite:.2f}" if limite is not None else '')
+    # El límite lo define solo el dueño: con el modo dueño bloqueado el
+    # campo queda tapado y se conserva el límite que ya tenía el cliente.
+    limite_editable = owner_lock.unlocked
+    campo('limite', "Límite de fiado en $ (vacío = sin límite; solo avisa)"
+          if limite_editable else "Límite de fiado (solo el dueño lo cambia)",
+          f"{limite:.2f}" if limite is not None and limite_editable
+          else (TAPADO if limite is not None else ''))
+    if not limite_editable:
+        entries['limite'].configure(state='disabled')
     campo('notas', "Notas (opcional)", c.get('notas', ''))
     entries['nombre'].focus()
 
@@ -77,9 +86,12 @@ def show_cliente_form(parent, on_save, cliente: dict = None) -> None:
                                  parent=dialog)
             return
         try:
-            limite_val = parse_monto(entries['limite'].get())
-            if limite_val is not None and limite_val < 0:
-                raise ValueError
+            if limite_editable:
+                limite_val = parse_monto(entries['limite'].get())
+                if limite_val is not None and limite_val < 0:
+                    raise ValueError
+            else:
+                limite_val = limite
         except ValueError:
             messagebox.showerror("Error", "Ingrese un límite válido",
                                  parent=dialog)

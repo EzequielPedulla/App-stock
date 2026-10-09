@@ -4,6 +4,7 @@ from typing import Any
 from tkinter import messagebox
 
 from ..models.database import Database
+from ..security import owner_lock
 from ..views.cliente_dialogs import show_cliente_form
 
 
@@ -36,13 +37,17 @@ class ClientesApi:
         nuevo_saldo = cliente['saldo'] + monto
         if nuevo_saldo <= limite + 0.005:
             return True
+        if owner_lock.unlocked:
+            detalle = (
+                f"{cliente['nombre']} debe ${cliente['saldo']:.2f} y con este "
+                f"fiado de ${monto:.2f} pasaría a deber ${nuevo_saldo:.2f}.\n"
+                f"Su límite es ${limite:.2f}.")
+        else:
+            detalle = (
+                f"Con este fiado de ${monto:.2f}, {cliente['nombre']} "
+                "pasaría su límite de fiado.")
         return messagebox.askyesno(
-            "Límite superado",
-            f"{cliente['nombre']} debe ${cliente['saldo']:.2f} y con este "
-            f"fiado de ${monto:.2f} pasaría a deber ${nuevo_saldo:.2f}.\n"
-            f"Su límite es ${limite:.2f}.\n\n"
-            "¿Fiar igual?",
-            parent=parent)
+            "Límite superado", detalle + "\n\n¿Fiar igual?", parent=parent)
 
 
 class FiadosController:

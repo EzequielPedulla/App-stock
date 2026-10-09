@@ -3,6 +3,7 @@ from ttkbootstrap.constants import *
 from tkinter import messagebox
 
 from ..utils import formatear_fecha_hora
+from ..security import owner_lock, money, TAPADO
 from .estilos import fix_label_backgrounds
 from .cliente_dialogs import _centrar, parse_monto, confirmar_enter
 
@@ -124,7 +125,7 @@ class FiadosForm(ttk.Frame):
                 f"${c['total_fiado']:.2f}",
                 f"${c['total_pagado']:.2f}",
                 f"${c['saldo']:.2f}",
-                f"${limite:.2f}" if limite is not None else "—",
+                (money(limite) if limite is not None else "—"),
             ))
         if seleccionado and self.tree.exists(seleccionado[0]):
             self.tree.selection_set(seleccionado[0])
@@ -134,7 +135,7 @@ class FiadosForm(ttk.Frame):
             "al elegir Fiado como método de pago en una venta.")
 
     def update_summary(self, total_deuda: float, con_deuda: int) -> None:
-        self.label_total_deuda.configure(text=f"${total_deuda:.2f}")
+        self.label_total_deuda.configure(text=money(total_deuda))
         self.label_con_deuda.configure(text=str(con_deuda))
 
     # ===== Cuenta corriente de un cliente =====
@@ -224,6 +225,12 @@ class FiadosForm(ttk.Frame):
             limite = c.get('limite')
             if limite is None:
                 limite_label.configure(text="Sin límite", foreground="#566573")
+            elif not owner_lock.unlocked:
+                excedido = saldo > limite + 0.005
+                limite_label.configure(
+                    text="⚠ Pasó su límite" if excedido
+                    else f"Límite {TAPADO}",
+                    foreground="#c0392b" if excedido else "#566573")
             elif saldo > limite + 0.005:
                 limite_label.configure(
                     text=f"⚠ Pasó el límite (${limite:.2f}) por "

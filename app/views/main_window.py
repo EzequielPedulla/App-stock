@@ -9,6 +9,8 @@ from .report_form import ReportForm
 from .fiados_form import FiadosForm
 from .scrollable_frame import ScrollableFrame
 from .estilos import fix_label_backgrounds
+from .owner_dialogs import pedir_clave, cambiar_clave
+from ..security import owner_lock
 
 
 class MainWindow(ttk.Window):
@@ -110,8 +112,19 @@ class MainWindow(ttk.Window):
         self._create_menu_buttons(menu_container)
 
         # Espaciador para alinear abajo la configuración
-        ttk.Frame(menu_container, bootstyle="primary").pack(
-            expand=True, fill=Y)
+        self._menu_spacer = ttk.Frame(menu_container, bootstyle="primary")
+        self._menu_spacer.pack(expand=True, fill=Y)
+
+        # Modo dueño: con la clave se destapan los montos sensibles
+        # (totales de Caja, Reportes y Fiados).
+        self.cambiar_clave_button = ttk.Button(
+            menu_container, text="🔑 Cambiar clave", bootstyle="info", width=16,
+            command=lambda: cambiar_clave(self))
+        self.lock_button = ttk.Button(
+            menu_container, text="🔒 Modo dueño", bootstyle="warning", width=16,
+            command=self._toggle_modo_dueno)
+        self.lock_button.pack(fill=X, padx=20, pady=(0, 20), side=BOTTOM,
+                              before=self._menu_spacer)
 
         # Frame principal con fondo blanco puro
         self.frame_contenido = tk.Frame(self, bg="white")
@@ -163,7 +176,49 @@ class MainWindow(ttk.Window):
         self.report_form.pack(fill=BOTH, expand=True)
 
         fix_label_backgrounds(self)
+        self._iniciar_modo_dueno()
         self.show_products()
+
+    def _iniciar_modo_dueno(self) -> None:
+        """Conecta el candado de dueño: cada vez que se bloquea o desbloquea
+        se actualizan los botones y las pantallas con montos, y se vuelve a
+        bloquear solo tras un rato sin usar la app."""
+        owner_lock.on_change(self._on_modo_dueno_cambio)
+        for evento in ('<Key>', '<Button>', '<Motion>'):
+            self.bind_all(evento, lambda e: owner_lock.touch(), add='+')
+        self._revisar_autobloqueo()
+        self._actualizar_boton_dueno()
+
+    def _revisar_autobloqueo(self) -> None:
+        owner_lock.check_autolock()
+        self.after(10_000, self._revisar_autobloqueo)
+
+    def _toggle_modo_dueno(self) -> None:
+        if owner_lock.unlocked:
+            owner_lock.lock()
+        else:
+            pedir_clave(self)
+
+    def _actualizar_boton_dueno(self) -> None:
+        if owner_lock.unlocked:
+            self.lock_button.configure(
+                text="🔓 Bloquear", bootstyle="danger")
+            self.cambiar_clave_button.pack(
+                fill=X, padx=20, pady=(0, 10), side=BOTTOM,
+                after=self.lock_button)
+        else:
+            self.lock_button.configure(
+                text="🔒 Modo dueño", bootstyle="warning")
+            self.cambiar_clave_button.pack_forget()
+
+    def _on_modo_dueno_cambio(self) -> None:
+        self._actualizar_boton_dueno()
+        for form, nombre in ((self.caja_form, 'caja_controller'),
+                             (self.fiados_form, 'fiados_controller'),
+                             (self.report_form, 'report_controller')):
+            controlador = getattr(form, nombre, None)
+            if controlador:
+                controlador.refresh()
 
     def _create_menu_buttons(self, container):
         """Crea los botones del menú lateral con el estilo moderno."""

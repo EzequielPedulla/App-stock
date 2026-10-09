@@ -7,6 +7,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from ..utils import formatear_fecha_hora
+from ..security import owner_lock, money
+from .owner_dialogs import ensure_unlocked
 
 METODO_PAGO_LABELS = {
     'efectivo': 'Efectivo',
@@ -305,7 +307,8 @@ class ReportForm(ttk.Frame):
         resumen = self.report_controller.get_resumen_dia(self._dia_filtro)
         dia_texto = self._texto_dia(self._dia_filtro)
         self.label_total_ventas.configure(
-            text=f"${resumen['total_ventas']:,.2f}")
+            text=(f"${resumen['total_ventas']:,.2f}"
+                  if owner_lock.unlocked else money(0)))
         self.card_total_titulo.configure(text=f"Total de ventas — {dia_texto}")
         cantidad = resumen['cantidad_ventas']
         self.label_cantidad_ventas.configure(text=f"{cantidad}")
@@ -315,8 +318,11 @@ class ReportForm(ttk.Frame):
     def update_data(self, productos_vendidos=None, ultimas_ventas=None):
         """Actualiza los datos mostrados en los reportes"""
 
-        # Actualizar gráfico de productos más vendidos
-        if productos_vendidos:
+        # Actualizar gráfico de productos más vendidos (tapado si el
+        # modo dueño está bloqueado)
+        if not owner_lock.unlocked:
+            self._update_grafico_bloqueado()
+        elif productos_vendidos:
             self._update_grafico(productos_vendidos)
         else:
             self._update_grafico([])
@@ -390,7 +396,7 @@ class ReportForm(ttk.Frame):
             c = resumen.get(metodo, {'cantidad': 0, 'total': 0.0})
             cantidad = c['cantidad']
             texto_cant = "1 pago" if cantidad == 1 else f"{cantidad} pagos"
-            label.configure(text=f"{texto_cant} — ${c['total']:.2f}")
+            label.configure(text=f"{texto_cant} — {money(c['total'])}")
 
     def _on_filtro_metodo_changed(self, event=None) -> None:
         texto = self.filtro_metodo_combo.get()
@@ -607,6 +613,20 @@ class ReportForm(ttk.Frame):
             width=20
         ).pack(side=LEFT, padx=5)
 
+    def _update_grafico_bloqueado(self):
+        """Reemplaza el gráfico por un aviso mientras esté bloqueado."""
+        if self.canvas_widget:
+            self.canvas_widget.get_tk_widget().destroy()
+            self.canvas_widget = None
+        for widget in self.grafico_frame.winfo_children():
+            widget.destroy()
+        ttk.Label(
+            self.grafico_frame,
+            text="🔒 Bloqueado\nActivá el Modo dueño (menú de la izquierda) "
+                 "para ver los productos más vendidos",
+            font=("Segoe UI", 16), foreground="#566573", justify=CENTER
+        ).place(relx=0.5, rely=0.5, anchor=CENTER)
+
     def _update_grafico(self, productos_vendidos):
         """Actualiza el gráfico de productos más vendidos"""
         try:
@@ -705,17 +725,17 @@ class ReportForm(ttk.Frame):
 
     def _on_export_pdf_report(self):
         """Maneja el clic en el botón de exportar reporte PDF"""
-        if self.report_controller:
+        if self.report_controller and ensure_unlocked(self):
             self.report_controller.export_sales_report_to_pdf()
 
     def _on_export_sales_excel(self):
         """Maneja el clic en el botón de exportar ventas a Excel"""
-        if self.report_controller:
+        if self.report_controller and ensure_unlocked(self):
             self.report_controller.export_sales_to_excel()
 
     def _on_export_inventory_excel(self):
         """Maneja el clic en el botón de exportar inventario a Excel"""
-        if self.report_controller:
+        if self.report_controller and ensure_unlocked(self):
             self.report_controller.export_inventory_to_excel()
 
     def _on_export_ticket_pdf(

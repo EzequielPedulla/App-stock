@@ -2,6 +2,8 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import messagebox
 
+from ..security import owner_lock, money
+
 
 class CajaForm(ttk.Frame):
     def __init__(self, parent, **kwargs):
@@ -421,26 +423,30 @@ class CajaForm(ttk.Frame):
             self.aviso_pendiente_frame.pack_forget()
 
     def update_summary(self, data: dict) -> None:
+        # Con el modo dueño bloqueado los montos aparecen tapados.
+        abierto = owner_lock.unlocked
         self.label_resultado_dia.configure(
-            text=f"${data['resultado_dia']:.2f}",
-            bootstyle="success" if data['resultado_dia'] >= 0 else "danger")
-        self.label_total_ventas_dia.configure(text=f"${data['total_ventas_dia']:.2f}")
-        self.label_total_gastos_dia.configure(text=f"${data['total_gastos_dia']:.2f}")
+            text=money(data['resultado_dia']),
+            bootstyle=("success" if data['resultado_dia'] >= 0 else "danger")
+            if abierto else "secondary")
+        self.label_total_ventas_dia.configure(text=money(data['total_ventas_dia']))
+        self.label_total_gastos_dia.configure(text=money(data['total_gastos_dia']))
         self.fondo_inicial_entry.delete(0, 'end')
         self.fondo_inicial_entry.insert(0, f"{data['fondo_inicial']:.2f}")
-        self.label_ventas_efectivo.configure(text=f"${data['ventas_efectivo']:.2f}")
-        self.label_ventas_transferencia.configure(text=f"${data['ventas_transferencia']:.2f}")
-        self.label_ventas_posnet.configure(text=f"${data['ventas_posnet']:.2f}")
-        self.label_ventas_fiado.configure(text=f"${data['ventas_fiado']:.2f}")
-        self.label_total_gastos_efectivo.configure(text=f"${data['total_gastos_efectivo']:.2f}")
-        self.label_total_gastos_transferencia.configure(text=f"${data['total_gastos_transferencia']:.2f}")
-        self.label_total_retiros.configure(text=f"${data['total_retiros']:.2f}")
-        self.label_total_bolsillo.configure(text=f"${data['total_bolsillo']:.2f}")
-        self.label_total_ingresos.configure(text=f"${data['total_ingresos']:.2f}")
-        self.label_total_cobros.configure(text=f"${data['total_cobros']:.2f}")
+        self.label_ventas_efectivo.configure(text=money(data['ventas_efectivo']))
+        self.label_ventas_transferencia.configure(text=money(data['ventas_transferencia']))
+        self.label_ventas_posnet.configure(text=money(data['ventas_posnet']))
+        self.label_ventas_fiado.configure(text=money(data['ventas_fiado']))
+        self.label_total_gastos_efectivo.configure(text=money(data['total_gastos_efectivo']))
+        self.label_total_gastos_transferencia.configure(text=money(data['total_gastos_transferencia']))
+        self.label_total_retiros.configure(text=money(data['total_retiros']))
+        self.label_total_bolsillo.configure(text=money(data['total_bolsillo']))
+        self.label_total_ingresos.configure(text=money(data['total_ingresos']))
+        self.label_total_cobros.configure(text=money(data['total_cobros']))
         self.label_efectivo_esperado.configure(
-            text=f"${data['efectivo_esperado']:.2f}",
-            bootstyle="success" if data['efectivo_esperado'] >= 0 else "danger")
+            text=money(data['efectivo_esperado']),
+            bootstyle=("success" if data['efectivo_esperado'] >= 0 else "danger")
+            if abierto else "secondary")
 
         if data['sin_datos']:
             self.estado_label.configure(
@@ -448,8 +454,9 @@ class CajaForm(ttk.Frame):
                      "Solo lectura.")
         elif data['cerrada']:
             self.estado_label.configure(
-                text=f"Caja cerrada. Efectivo contado: ${data['efectivo_contado']:.2f} "
-                     f"(diferencia: ${data['diferencia']:+.2f})")
+                text=f"Caja cerrada. Efectivo contado: ${data['efectivo_contado']:.2f}"
+                     + (f" (diferencia: ${data['diferencia']:+.2f})"
+                        if owner_lock.unlocked else ""))
         elif not data['es_hoy']:
             self.estado_label.configure(
                 text="Este día quedó sin cerrar. Podés completarlo y cerrarlo desde acá.")
@@ -491,8 +498,14 @@ class CajaForm(ttk.Frame):
             main_frame, text="Cerrar Caja", font=("Segoe UI", 20, "bold")
         ).pack(pady=(0, 15))
 
+        # Con el modo dueño bloqueado no se muestra cuánto debería haber:
+        # se cuenta el cajón a ciegas y la diferencia la ve el dueño.
+        ver_esperado = owner_lock.unlocked
         ttk.Label(
-            main_frame, text=f"Efectivo esperado: ${efectivo_esperado:.2f}",
+            main_frame,
+            text=(f"Efectivo esperado: ${efectivo_esperado:.2f}"
+                  if ver_esperado else
+                  "Contá el efectivo del cajón y escribilo abajo."),
             font=("Segoe UI", 16)
         ).pack(pady=(0, 15))
 
@@ -508,6 +521,8 @@ class CajaForm(ttk.Frame):
         diferencia_label.pack(pady=(0, 10))
 
         def calcular_diferencia(event=None):
+            if not ver_esperado:
+                return
             try:
                 contado = float(contado_entry.get() or 0)
                 diferencia = contado - efectivo_esperado

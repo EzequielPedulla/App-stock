@@ -125,6 +125,13 @@ class Database:
             )
         ''')
 
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS config (
+                key VARCHAR(50) PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        ''')
+
         self._migrate_add_payment_method_column()
         self._migrate_add_forma_pago_column()
         self._migrate_add_cliente_id_column()
@@ -526,6 +533,19 @@ class Database:
             (f"{fecha}%",)
         )
         return int(result[0]['n']) if result else 0
+
+    def get_config(self, key: str):
+        """Valor guardado para `key` (texto) o None si no existe."""
+        result = self.execute_query(
+            "SELECT value FROM config WHERE key = ?", (key,))
+        return result[0]['value'] if result else None
+
+    def set_config(self, key: str, value: str) -> None:
+        self.cursor.execute(
+            "INSERT INTO config (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value))
+        self.connection.commit()
 
     # ===== Cuaderno de fiados =====
 
