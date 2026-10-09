@@ -98,8 +98,36 @@ class Database:
             )
         ''')
 
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS clientes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre VARCHAR(100) NOT NULL,
+                telefono VARCHAR(30) NOT NULL DEFAULT '',
+                dni VARCHAR(20) NOT NULL DEFAULT '',
+                direccion VARCHAR(150) NOT NULL DEFAULT '',
+                notas TEXT NOT NULL DEFAULT '',
+                limite REAL NULL,
+                activo INTEGER NOT NULL DEFAULT 1,
+                created_at DATETIME NOT NULL
+            )
+        ''')
+
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pagos_cliente (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cliente_id INTEGER NOT NULL,
+                monto REAL NOT NULL,
+                forma_pago VARCHAR(20) NOT NULL DEFAULT 'efectivo',
+                fecha DATETIME NOT NULL,
+                nota VARCHAR(200) NOT NULL DEFAULT '',
+                movimiento_id INTEGER NULL,
+                FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+            )
+        ''')
+
         self._migrate_add_payment_method_column()
         self._migrate_add_forma_pago_column()
+        self._migrate_add_cliente_id_column()
         self.connection.commit()
 
     def _migrate_add_payment_method_column(self):
@@ -123,6 +151,16 @@ class Database:
                 "ALTER TABLE caja_movimientos ADD COLUMN forma_pago "
                 "VARCHAR(20) NOT NULL DEFAULT 'efectivo'"
             )
+
+    def _migrate_add_cliente_id_column(self):
+        """Agrega cliente_id a sales (a quién se le fió la venta) en bases
+        creadas antes de que existiera el cuaderno de fiados."""
+        self.cursor.execute("PRAGMA table_info(sales)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if 'cliente_id' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE sales ADD COLUMN cliente_id INTEGER NULL "
+                "REFERENCES clientes(id)")
 
     def add_product(self, product, commit=True):
         self.cursor.execute('''
@@ -164,16 +202,19 @@ class Database:
 
     def add_sale(self, date: str, total: float, paid: float, change: float,
                  payment_method: str = 'efectivo', payments: list = None,
-                 commit=True) -> int:
+                 commit=True, cliente_id: int = None) -> int:
         """Registra una venta. `payments` es opcional y sirve para ventas
         pagadas con más de un método a la vez (ej. parte efectivo, parte
         transferencia): una lista de {'method': str, 'amount': float}. En
         ese caso `payment_method` debe ser 'mixto', y el detalle de cada
-        pago se guarda aparte en sale_payments."""
+        pago se guarda aparte en sale_payments. Una venta total o
+        parcialmente fiada ('fiado', o 'mixto' con una parte 'fiado') lleva
+        `cliente_id`: a quién se le anotó lo que quedó sin cobrar."""
         self.cursor.execute(
-            '''INSERT INTO sales (date, total, paid, `change`, payment_method)
-               VALUES (?, ?, ?, ?, ?)''',
-            (date, total, paid, change, payment_method)
+            '''INSERT INTO sales (date, total, paid, `change`, payment_method,
+                                  cliente_id)
+               VALUES (?, ?, ?, ?, ?, ?)''',
+            (date, total, paid, change, payment_method, cliente_id)
         )
         sale_id = self.cursor.lastrowid
         if payments:
@@ -485,6 +526,193 @@ class Database:
             (f"{fecha}%",)
         )
         return int(result[0]['n']) if result else 0
+
+    # ===== Cuaderno de fiados =====
+
+    # Cuánto de una venta quedó fiado: todo el total si fue 'fiado', o la
+    # parte 'fiado' del detalle si fue un pago dividido ('mixto').
+    _FIADO_DE_VENTA = """
+        CASE WHEN s.payment_method = 'fiado' THEN s.total
+             WHEN s.payment_method = 'mixto' THEN COALESCE((
+                 SELECT SUM(sp.amount) FROM sale_payments sp
+                 WHERE sp.sale_id = s.id AND sp.payment_method = 'fiado'), 0)
+             ELSE 0 END"""
+
+    def add_cliente(self, nombre: str, telefono: str = '', dni: str = '',
+                    direccion: str = '', notas: str = '',
+                    limite: float = None) -> int:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute(
+            """INSERT INTO clientes
+               (nombre, telefono, dni, direccion, notas, limite, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (nombre, telefono, dni, direccion, notas, limite, now)
+        )
+        self.connection.commit()
+        return self.cursor.lastrowid
+
+    def update_cliente(self, cliente_id: int, nombre: str, telefono: str,
+                       dni: str, direccion: str, notas: str,
+                       limite: float = None) -> None:
+        self.cursor.execute(
+            """UPDATE clientes
+               SET nombre = ?, telefono = ?, dni = ?, direccion = ?,
+                   notas = ?, limite = ?
+               WHERE id = ?""",
+            (nombre, telefono, dni, direccion, notas, limite, cliente_id)
+        )
+        self.connection.commit()
+
+    def set_cliente_activo(self, cliente_id: int, activo: bool) -> None:
+        self.cursor.execute(
+            "UPDATE clientes SET activo = ? WHERE id = ?",
+            (1 if activo else 0, cliente_id))
+        self.connection.commit()
+
+    def delete_cliente(self, cliente_id: int) -> bool:
+        """Borra un cliente solo si nunca tuvo movimientos; si tiene
+        historial hay que desactivarlo (set_cliente_activo)."""
+        usado = self.execute_query(
+            """SELECT (SELECT COUNT(*) FROM sales WHERE cliente_id = ?) +
+                      (SELECT COUNT(*) FROM pagos_cliente WHERE cliente_id = ?)
+               AS n""", (cliente_id, cliente_id))
+        if usado and int(usado[0]['n']) > 0:
+            return False
+        self.cursor.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
+        self.connection.commit()
+        return True
+
+    def get_clientes(self, texto: str = '', solo_con_deuda: bool = False,
+                     incluir_inactivos: bool = False) -> list:
+        """Lista de clientes (dict) con `total_fiado`, `total_pagado` y
+        `saldo` (lo que deben). `texto` filtra por nombre, teléfono o DNI.
+        Los que más deben primero, después por nombre."""
+        condiciones = []
+        params = []
+        if not incluir_inactivos:
+            condiciones.append("c.activo = 1")
+        texto = (texto or '').strip().lower()
+        if texto:
+            condiciones.append(
+                "(LOWER(c.nombre) LIKE ? OR c.telefono LIKE ? OR c.dni LIKE ?)")
+            like = f"%{texto}%"
+            params += [like, like, like]
+        where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
+        rows = self.execute_query(
+            f"""SELECT c.*,
+                  COALESCE((SELECT SUM({self._FIADO_DE_VENTA})
+                            FROM sales s
+                            WHERE s.cliente_id = c.id AND s.status = 'active'),
+                           0) AS total_fiado,
+                  COALESCE((SELECT SUM(p.monto) FROM pagos_cliente p
+                            WHERE p.cliente_id = c.id), 0) AS total_pagado
+                FROM clientes c {where}""", tuple(params))
+        for r in rows:
+            r['total_fiado'] = round(float(r['total_fiado']), 2)
+            r['total_pagado'] = round(float(r['total_pagado']), 2)
+            r['saldo'] = round(r['total_fiado'] - r['total_pagado'], 2)
+        if solo_con_deuda:
+            rows = [r for r in rows if r['saldo'] > 0.005]
+        rows.sort(key=lambda r: (-r['saldo'], r['nombre'].lower()))
+        return rows
+
+    def get_cliente(self, cliente_id: int):
+        """Un cliente (dict, con su saldo) o None."""
+        for c in self.get_clientes(incluir_inactivos=True):
+            if c['id'] == cliente_id:
+                return c
+        return None
+
+    def get_ventas_fiadas_cliente(self, cliente_id: int) -> list:
+        """Ventas con parte fiada del cliente (incluye las anuladas, con su
+        `status`, para que se vea qué pasó), la más reciente primero. Cada
+        una trae `fiado` (lo que quedó sin cobrar), `total` y `productos`
+        (texto con el detalle)."""
+        ventas = self.execute_query(
+            f"""SELECT s.id, s.date, s.total, s.status,
+                       {self._FIADO_DE_VENTA} AS fiado
+                FROM sales s
+                WHERE s.cliente_id = ?
+                ORDER BY s.date DESC, s.id DESC""", (cliente_id,))
+        for v in ventas:
+            detalle = self.execute_query(
+                """SELECT p.name, sd.quantity
+                   FROM sale_details sd JOIN products p ON p.id = sd.product_id
+                   WHERE sd.sale_id = ?""", (v['id'],))
+            v['productos'] = ", ".join(
+                f"{d['quantity']} x {d['name']}" for d in detalle)
+        return ventas
+
+    def get_pagos_cliente(self, cliente_id: int) -> list:
+        return self.execute_query(
+            "SELECT * FROM pagos_cliente WHERE cliente_id = ? "
+            "ORDER BY fecha DESC, id DESC", (cliente_id,))
+
+    def _get_or_create_caja_sesion_hoy(self) -> dict:
+        """Sesión de caja de hoy; si todavía no se abrió, la crea con el
+        mismo fondo inicial que CajaController (lo contado al cerrar el
+        día anterior, o $0)."""
+        hoy = datetime.now().strftime('%Y-%m-%d')
+        sesion = self.get_caja_sesion_by_fecha(hoy)
+        if sesion is None:
+            anterior = self.get_last_caja_sesion()
+            fondo = 0.0
+            if anterior and anterior['efectivo_contado'] is not None:
+                fondo = float(anterior['efectivo_contado'])
+            self.create_caja_sesion(hoy, fondo)
+            sesion = self.get_caja_sesion_by_fecha(hoy)
+        return sesion
+
+    def add_pago_cliente(self, cliente_id: int, monto: float,
+                         forma_pago: str = 'efectivo', nota: str = '') -> bool:
+        """Registra un pago (total o parcial) de un cliente y, si la caja
+        de hoy sigue abierta, lo anota como 'Cobro (fiado)' para que entre
+        en la plata del día. Devuelve True si quedó anotado en Caja; False
+        si la caja de hoy ya estaba cerrada (el pago igual baja la deuda
+        del cliente)."""
+        cliente = self.get_cliente(cliente_id)
+        nombre = cliente['nombre'] if cliente else 'cliente'
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        sesion = self._get_or_create_caja_sesion_hoy()
+        movimiento_id = None
+        if not sesion['cerrada']:
+            self.cursor.execute(
+                """INSERT INTO caja_movimientos
+                   (sesion_id, tipo, descripcion, monto, fecha, forma_pago)
+                   VALUES (?, 'cobro', ?, ?, ?, ?)""",
+                (sesion['id'], f"Cobro de fiado - {nombre}", monto, now,
+                 forma_pago))
+            movimiento_id = self.cursor.lastrowid
+        self.cursor.execute(
+            """INSERT INTO pagos_cliente
+               (cliente_id, monto, forma_pago, fecha, nota, movimiento_id)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (cliente_id, monto, forma_pago, now, nota, movimiento_id))
+        self.connection.commit()
+        return movimiento_id is not None
+
+    def delete_pago_cliente(self, pago_id: int) -> bool:
+        """Anula un pago cargado por error (la deuda vuelve a subir y, si
+        estaba en Caja, se saca de ahí). Si ese cobro quedó en una caja ya
+        cerrada no se puede borrar: devuelve False."""
+        pago = self.execute_query(
+            "SELECT * FROM pagos_cliente WHERE id = ?", (pago_id,))
+        if not pago:
+            return False
+        movimiento_id = pago[0]['movimiento_id']
+        if movimiento_id is not None:
+            cerrada = self.execute_query(
+                """SELECT cs.cerrada FROM caja_movimientos cm
+                   JOIN caja_sesiones cs ON cs.id = cm.sesion_id
+                   WHERE cm.id = ?""", (movimiento_id,))
+            if cerrada and cerrada[0]['cerrada']:
+                return False
+            self.cursor.execute(
+                "DELETE FROM caja_movimientos WHERE id = ?", (movimiento_id,))
+        self.cursor.execute(
+            "DELETE FROM pagos_cliente WHERE id = ?", (pago_id,))
+        self.connection.commit()
+        return True
 
     def __del__(self):
         # No cerrar la conexión en el destructor ya que es compartida

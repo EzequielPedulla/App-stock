@@ -6,6 +6,7 @@ import datetime
 
 from ..models.database import Database
 from ..models.product import Product
+from .fiados_controller import ClientesApi
 
 
 class SaleController:
@@ -29,6 +30,8 @@ class SaleController:
         self.product_list = product_list
         self.report_controller = report_controller
         self.db = Database()
+        # Selector de cliente para las ventas fiadas (total o parcialmente)
+        self.sale_form.clientes_api = ClientesApi()
         self.items = []
         self.temp_stock = {}
         self._varios_counter = 0
@@ -487,6 +490,8 @@ class SaleController:
             payment_method = getattr(self.sale_form, 'payment_method', 'efectivo')
             # Solo presente si la venta se pagó dividida entre dos métodos
             payments = getattr(self.sale_form, 'payments', None)
+            # A quién se le fió (solo si quedó algo sin cobrar)
+            cliente_id = getattr(self.sale_form, 'cliente_id', None)
             total = sum(float(item['subtotal']) for item in self.items)
             date = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
 
@@ -495,7 +500,8 @@ class SaleController:
             # de dejar una venta a medio registrar.
             sale_id = self.db.add_sale(
                 date=date, total=total, paid=paid, change=change,
-                payment_method=payment_method, payments=payments, commit=False)
+                payment_method=payment_method, payments=payments, commit=False,
+                cliente_id=cliente_id)
 
             # Registrar los detalles de la venta
             for item in self.items:

@@ -86,7 +86,7 @@ class ReportForm(ttk.Frame):
         self.card_total_titulo = ttk.Label(
             card_total,
             text="Total de ventas",
-            font=("Segoe UI", 14)
+            font=("Segoe UI", 16)
         )
         self.card_total_titulo.pack(anchor=W)
 
@@ -106,7 +106,7 @@ class ReportForm(ttk.Frame):
         self.card_cantidad_titulo = ttk.Label(
             card_cantidad,
             text="Cantidad de ventas",
-            font=("Segoe UI", 14)
+            font=("Segoe UI", 16)
         )
         self.card_cantidad_titulo.pack(anchor=W)
 
@@ -132,7 +132,7 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             card_grafico,
             text="Productos más vendidos",
-            font=("Segoe UI", 16, "bold")
+            font=("Segoe UI", 18, "bold")
         ).pack(anchor=W, pady=(0, 15))
 
         # Frame para el gráfico
@@ -153,7 +153,7 @@ class ReportForm(ttk.Frame):
             width=14, command=self._ir_dia_anterior)
         self.dia_anterior_button.pack(side=LEFT)
         self.dia_label = ttk.Label(
-            dia_nav_row, text="Hoy", font=("Segoe UI", 14, "bold"))
+            dia_nav_row, text="Hoy", font=("Segoe UI", 16, "bold"))
         self.dia_label.pack(side=LEFT, padx=15)
         self.dia_siguiente_button = ttk.Button(
             dia_nav_row, text="Día siguiente ▶", bootstyle="secondary",
@@ -178,9 +178,9 @@ class ReportForm(ttk.Frame):
             card.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 8))
             ttk.Label(
                 card, text=METODO_PAGO_LABELS[metodo],
-                font=("Segoe UI", 11, "bold")
+                font=("Segoe UI", 13, "bold")
             ).pack(anchor=W)
-            lbl = ttk.Label(card, text="0 pagos — $0.00", font=("Segoe UI", 11))
+            lbl = ttk.Label(card, text="0 pagos — $0.00", font=("Segoe UI", 13))
             lbl.pack(anchor=W, pady=(4, 0))
             self.resumen_metodo_labels[metodo] = lbl
 
@@ -190,16 +190,16 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             tabla_header,
             text="Historial de ventas",
-            font=("Segoe UI", 16, "bold")
+            font=("Segoe UI", 18, "bold")
         ).pack(side=LEFT)
 
         filtro_frame = ttk.Frame(tabla_header)
         filtro_frame.pack(side=RIGHT)
         ttk.Label(
-            filtro_frame, text="Método de pago:", font=("Segoe UI", 12)
+            filtro_frame, text="Método de pago:", font=("Segoe UI", 14)
         ).pack(side=LEFT, padx=(0, 8))
         self.filtro_metodo_combo = ttk.Combobox(
-            filtro_frame, state="readonly", width=16, font=("Segoe UI", 12),
+            filtro_frame, state="readonly", width=16, font=("Segoe UI", 14),
             values=["Todos", "Efectivo", "Transferencia", "Posnet", "Fiado",
                     "Mixto"])
         self.filtro_metodo_combo.current(0)
@@ -211,12 +211,12 @@ class ReportForm(ttk.Frame):
         style = ttk.Style()
         style.configure(
             "Ventas.Treeview",
-            rowheight=40,
-            font=('Segoe UI', 13)
+            rowheight=46,
+            font=('Segoe UI', 15)
         )
         style.configure(
             "Ventas.Treeview.Heading",
-            font=('Segoe UI', 14, 'bold')
+            font=('Segoe UI', 16, 'bold')
         )
 
         # Frame para la tabla con scrollbar
@@ -242,9 +242,9 @@ class ReportForm(ttk.Frame):
         self.tabla_ventas.heading("metodo", text="Método de pago", anchor=CENTER)
         self.tabla_ventas.heading("total", text="Total", anchor=E)
 
-        self.tabla_ventas.column("fecha", width=170, anchor=W)
-        self.tabla_ventas.column("metodo", width=150, anchor=CENTER)
-        self.tabla_ventas.column("total", width=110, anchor=E)
+        self.tabla_ventas.column("fecha", width=190, anchor=W)
+        self.tabla_ventas.column("metodo", width=168, anchor=CENTER)
+        self.tabla_ventas.column("total", width=123, anchor=E)
 
         # Colores alternados
         self.tabla_ventas.tag_configure('evenrow', background='#ecf0f1')
@@ -404,7 +404,7 @@ class ReportForm(ttk.Frame):
         # Crear ventana modal
         detail_window = ttk.Toplevel(self)
         detail_window.title(f"Detalle de Venta N° {sale_id}")
-        detail_window.geometry("940x780")
+        detail_window.geometry("1052x896")
         detail_window.resizable(False, False)
         detail_window.transient(self)
         detail_window.grab_set()
@@ -434,7 +434,7 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             header_frame,
             text=f"Fecha: {sale_date}",
-            font=("Segoe UI", 14)
+            font=("Segoe UI", 16)
         ).pack(side=RIGHT)
 
         # ===== Método de pago: se puede corregir por si se cargó mal al
@@ -446,14 +446,14 @@ class ReportForm(ttk.Frame):
         metodo_top_row = ttk.Frame(metodo_frame)
         metodo_top_row.pack(fill=X, pady=(0, 10))
         ttk.Label(
-            metodo_top_row, text="Método de pago:", font=("Segoe UI", 13)
+            metodo_top_row, text="Método de pago:", font=("Segoe UI", 15)
         ).pack(side=LEFT, padx=(0, 10))
 
         metodo_actual = {'valor': payment_method or 'efectivo'}
         metodo_label = ttk.Label(
             metodo_top_row,
             text=METODO_PAGO_LABELS.get(metodo_actual['valor'], 'Efectivo'),
-            font=("Segoe UI", 13, "bold"))
+            font=("Segoe UI", 15, "bold"))
         metodo_label.pack(side=LEFT)
 
         # Fila propia para los botones: así entran todos (4 métodos +
@@ -498,19 +498,19 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             main_frame,
             text="Productos",
-            font=("Segoe UI", 16, "bold")
+            font=("Segoe UI", 18, "bold")
         ).pack(anchor=W, pady=(0, 10))
 
         # Estilo para la tabla de detalles
         style = ttk.Style()
         style.configure(
             "Details.Treeview",
-            rowheight=40,
-            font=('Segoe UI', 13)
+            rowheight=46,
+            font=('Segoe UI', 15)
         )
         style.configure(
             "Details.Treeview.Heading",
-            font=('Segoe UI', 14, 'bold')
+            font=('Segoe UI', 16, 'bold')
         )
 
         # Crear tabla
@@ -528,10 +528,10 @@ class ReportForm(ttk.Frame):
         tree.heading("precio", text="Precio", anchor=E)
         tree.heading("subtotal", text="Subtotal", anchor=E)
 
-        tree.column("producto", width=400, anchor=W)
-        tree.column("cantidad", width=140, anchor=CENTER)
-        tree.column("precio", width=150, anchor=E)
-        tree.column("subtotal", width=150, anchor=E)
+        tree.column("producto", width=448, anchor=W)
+        tree.column("cantidad", width=156, anchor=CENTER)
+        tree.column("precio", width=168, anchor=E)
+        tree.column("subtotal", width=168, anchor=E)
 
         # Insertar productos
         for i, detail in enumerate(details):
@@ -563,7 +563,7 @@ class ReportForm(ttk.Frame):
         ttk.Label(
             total_frame,
             text="Total de la venta:",
-            font=("Segoe UI", 16)
+            font=("Segoe UI", 18)
         ).pack(side=LEFT)
 
         ttk.Label(
@@ -623,8 +623,8 @@ class ReportForm(ttk.Frame):
                 ttk.Label(
                     self.grafico_frame,
                     text="📊 No hay datos de ventas aún",
-                    font=("Segoe UI", 13),
-                    foreground="gray"
+                    font=("Segoe UI", 15),
+                    foreground="#566573"
                 ).place(relx=0.5, rely=0.5, anchor=CENTER)
                 return
 
@@ -699,7 +699,7 @@ class ReportForm(ttk.Frame):
             ttk.Label(
                 self.grafico_frame,
                 text=f"❌ Error al crear gráfico\n{str(e)}",
-                font=("Segoe UI", 11),
+                font=("Segoe UI", 13),
                 foreground="red"
             ).place(relx=0.5, rely=0.5, anchor=CENTER)
 

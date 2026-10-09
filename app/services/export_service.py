@@ -498,7 +498,7 @@ class ExportService:
             'transferencia': 'Transferencia',
             'posnet': 'Posnet',
             'fiado': 'Fiado (pendiente de cobro)',
-            'mixto': 'Efectivo + Transferencia',
+            'mixto': 'Pago dividido',
         }
 
         # Líneas separadoras como filete real (no texto "="/"-"): se arman
@@ -576,6 +576,10 @@ class ExportService:
                 "Sin cobrar (fiado)", derecha_style))
         else:
             story.append(Paragraph(f"Pagado: ${sale_paid:.2f}", derecha_style))
+            if payment_method == 'mixto' and sale_total - sale_paid > 0.005:
+                story.append(Paragraph(
+                    f"A cuenta (fiado): ${sale_total - sale_paid:.2f}",
+                    derecha_style))
             if sale_change > 0.005:
                 story.append(Paragraph(
                     f"Vuelto: ${sale_change:.2f}", derecha_style))

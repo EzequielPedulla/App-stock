@@ -11,6 +11,7 @@ from app.controllers.product_controller import ProductController
 from app.controllers.sale_controller import SaleController
 from app.controllers.report_controller import ReportController
 from app.controllers.caja_controller import CajaController
+from app.controllers.fiados_controller import FiadosController
 
 
 def main():
@@ -30,6 +31,8 @@ def main():
     )
 
     caja_controller = CajaController(window.caja_form)
+
+    fiados_controller = FiadosController(window.fiados_form)
 
     window.mainloop()
 

@@ -6,7 +6,9 @@ from .product_list import ProductList
 from .sale_form import SaleForm
 from .caja_form import CajaForm
 from .report_form import ReportForm
+from .fiados_form import FiadosForm
 from .scrollable_frame import ScrollableFrame
+from .estilos import fix_label_backgrounds
 
 
 class MainWindow(ttk.Window):
@@ -39,15 +41,35 @@ class MainWindow(ttk.Window):
         donde el texto chico por defecto cuesta leer."""
         style = ttk.Style()
 
+        # Colores con más contraste: el gris "secondary" del tema (#95a5a6)
+        # con letra blanca cuesta leer en un monitor chico.
+        style.colors.set('secondary', '#5d6d7e')
+        style.colors.set('selectbg', '#2c3e50')
+        style.colors.set('selectfg', '#ffffff')
+        style.theme_use('flatly')
+        # La fila seleccionada de las tablas también era gris claro con
+        # letra blanca: se pasa a azul oscuro, bien visible.
+        style.map("Treeview",
+                  background=[("selected", "#2c3e50")],
+                  foreground=[("selected", "white")])
+
         # Fuente base: cubre los widgets que no definen su propia fuente
         # explícita (algunos Entry, y cualquier Treeview sin estilo propio,
         # como el de "Buscar Producto" en Ventas).
-        style.configure(".", font=("Segoe UI", 13))
-        style.configure("Treeview", font=("Segoe UI", 13), rowheight=38)
-        style.configure("Treeview.Heading", font=("Segoe UI", 14, "bold"))
-        style.configure("TButton", font=("Segoe UI", 13))
-        style.configure("TEntry", font=("Segoe UI", 13))
-        style.configure("TLabel", font=("Segoe UI", 13))
+        style.configure(".", font=("Segoe UI", 15))
+        style.configure("Treeview", font=("Segoe UI", 15), rowheight=46)
+        style.configure("Treeview.Heading", font=("Segoe UI", 16, "bold"))
+        style.configure("TButton", font=("Segoe UI", 15))
+        style.configure("TEntry", font=("Segoe UI", 15))
+        style.configure("TLabel", font=("Segoe UI", 15))
+        style.configure("TCheckbutton", font=("Segoe UI", 15))
+        style.configure("TRadiobutton", font=("Segoe UI", 15))
+        style.configure("TCombobox", font=("Segoe UI", 15))
+        style.configure("TMenubutton", font=("Segoe UI", 15))
+        style.configure("TNotebook.Tab", font=("Segoe UI", 15))
+        # La lista desplegable de los combobox es un widget tk clásico: no
+        # toma el estilo ttk, hay que darle la fuente aparte.
+        self.option_add("*TCombobox*Listbox.font", ("Segoe UI", 15))
 
         # Estilo para botones del menú lateral
         style.configure(
@@ -56,7 +78,7 @@ class MainWindow(ttk.Window):
             foreground="white",
             borderwidth=0,
             focuscolor="none",
-            font=("Segoe UI", 15, "normal"),
+            font=("Segoe UI", 17, "normal"),
             padding=(22, 20),
             relief="flat"
         )
@@ -69,7 +91,7 @@ class MainWindow(ttk.Window):
 
     def _create_widgets(self):
         # Frame de navegación (menú lateral)
-        self.frame_nav = ttk.Frame(self, bootstyle="primary", width=230)
+        self.frame_nav = ttk.Frame(self, bootstyle="primary", width=270)
         self.frame_nav.pack(side=LEFT, fill=Y)
         self.frame_nav.pack_propagate(False)
 
@@ -127,12 +149,20 @@ class MainWindow(ttk.Window):
         self.caja_form = CajaForm(caja_scroll.interior)
         self.caja_form.pack(fill=BOTH, expand=True)
 
+        # Frame para fiados (cuaderno de clientes que deben)
+        self.fiados_frame = tk.Frame(self.contenido_interno, bg="white")
+        fiados_scroll = ScrollableFrame(self.fiados_frame)
+        fiados_scroll.pack(fill=BOTH, expand=True)
+        self.fiados_form = FiadosForm(fiados_scroll.interior)
+        self.fiados_form.pack(fill=BOTH, expand=True)
+
         self.reports_frame = tk.Frame(self.contenido_interno, bg="white")
         reports_scroll = ScrollableFrame(self.reports_frame)
         reports_scroll.pack(fill=BOTH, expand=True)
         self.report_form = ReportForm(reports_scroll.interior)
         self.report_form.pack(fill=BOTH, expand=True)
 
+        fix_label_backgrounds(self)
         self.show_products()
 
     def _create_menu_buttons(self, container):
@@ -141,6 +171,7 @@ class MainWindow(ttk.Window):
             ("📦", "Productos", self.show_products),
             ("💰", "Ventas", self.show_sales),
             ("🧮", "Caja", self.show_caja),
+            ("📒", "Fiados", self.show_fiados),
             ("📊", "Reportes", self.show_reports)
         ]
 
@@ -161,6 +192,7 @@ class MainWindow(ttk.Window):
         self.ventas_frame.pack_forget()
         self.caja_frame.pack_forget()
         self.reports_frame.pack_forget()
+        self.fiados_frame.pack_forget()
         self.productos_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Productos")
 
@@ -169,6 +201,7 @@ class MainWindow(ttk.Window):
         self.productos_frame.pack_forget()
         self.caja_frame.pack_forget()
         self.reports_frame.pack_forget()
+        self.fiados_frame.pack_forget()
         self.ventas_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Ventas")
 
@@ -177,15 +210,28 @@ class MainWindow(ttk.Window):
         self.productos_frame.pack_forget()
         self.ventas_frame.pack_forget()
         self.reports_frame.pack_forget()
+        self.fiados_frame.pack_forget()
         self.caja_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Caja")
         if getattr(self.caja_form, 'caja_controller', None):
             self.caja_form.caja_controller.refresh()
 
+    def show_fiados(self):
+        """Muestra el cuaderno de fiados y actualiza el título."""
+        self.productos_frame.pack_forget()
+        self.ventas_frame.pack_forget()
+        self.caja_frame.pack_forget()
+        self.reports_frame.pack_forget()
+        self.fiados_frame.pack(fill=BOTH, expand=True)
+        self.titulo_label.config(text="Fiados")
+        if getattr(self.fiados_form, 'fiados_controller', None):
+            self.fiados_form.fiados_controller.refresh()
+
     def show_reports(self):
         self.productos_frame.pack_forget()
         self.ventas_frame.pack_forget()
         self.caja_frame.pack_forget()
+        self.fiados_frame.pack_forget()
         self.reports_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Reportes")
         if getattr(self.report_form, 'report_controller', None):
