@@ -36,13 +36,28 @@ class ReportController:
     def refresh(self) -> None:
         """Actualiza todos los datos de los reportes."""
         ultimas = self._get_ultimas_ventas()
-        mas_vendidos = self._get_productos_mas_vendidos()
 
-        self.report_form.update_data(
-            ultimas_ventas=ultimas,
-            productos_vendidos=mas_vendidos
-        )
+        self.report_form.update_data(ultimas_ventas=ultimas)
         self.report_form.update_idletasks()
+
+    def get_resumen_periodo(self, desde: str, hasta: str) -> dict:
+        """Cálculo general entre dos fechas (ver Database.get_resumen_periodo)."""
+        return self.db.get_resumen_periodo(desde, hasta)
+
+    def export_period_summary_to_excel(self, desde: str, hasta: str) -> None:
+        """Exporta a Excel el resumen del período elegido."""
+        try:
+            resumen = self.db.get_resumen_periodo(desde, hasta)
+            filename = self.export_service.export_period_summary_to_excel(
+                desde, hasta, resumen)
+            if messagebox.askyesno(
+                "Exportación exitosa",
+                f"Archivo generado:\n{filename}\n\n¿Desea abrirlo?"
+            ):
+                os.startfile(filename)
+        except Exception as e:
+            messagebox.showerror(
+                "Error al exportar", f"No se pudo exportar a Excel:\n{str(e)}")
 
     def get_resumen_dia(self, fecha: str) -> dict:
         """Total vendido y cantidad de ventas de un día, con la misma
@@ -181,12 +196,14 @@ class ReportController:
             messagebox.showinfo(
                 "Sin detalles", "No se encontraron detalles para esta venta.")
 
-    def update_sale_payment_method(self, sale_id: int, payment_method: str) -> None:
+    def update_sale_payment_method(self, sale_id: int, payment_method: str,
+                                   cliente_id: int = None) -> None:
         """Corrige el método de pago de una venta (por si se cargó mal al
         momento de la venta). Refresca reportes para que el cambio se vea
         reflejado en los totales por método (y en Caja al volver a esa
         pantalla, que lee siempre de la base)."""
-        self.db.update_sale_payment_method(sale_id, payment_method)
+        self.db.update_sale_payment_method(
+            sale_id, payment_method, cliente_id)
         self.refresh()
 
     def export_sales_to_excel(self) -> None:

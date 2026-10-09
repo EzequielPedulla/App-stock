@@ -1,7 +1,17 @@
 import sqlite3
+import unicodedata
 from datetime import datetime
 from .product import Product
 from config import DB_PATH
+
+
+def _normalizar(texto) -> str:
+    """Minúsculas y sin tildes, para buscar 'jose' y encontrar 'José'."""
+    if texto is None:
+        return ''
+    sin_tildes = unicodedata.normalize('NFD', str(texto))
+    return ''.join(
+        c for c in sin_tildes if unicodedata.category(c) != 'Mn').lower()
 
 
 class Database:
@@ -19,6 +29,7 @@ class Database:
         if Database._connection is None:
             Database._connection = sqlite3.connect(str(DB_PATH))
             Database._connection.row_factory = sqlite3.Row
+            Database._connection.create_function('norm', 1, _normalizar)
             Database._connection.execute('PRAGMA foreign_keys = ON')
             self.connection = Database._connection
             self.cursor = self.connection.cursor()
@@ -411,15 +422,18 @@ class Database:
         )
         return int(result[0]['n']) if result else 1
 
-    def update_sale_payment_method(self, sale_id: int, payment_method: str) -> None:
+    def update_sale_payment_method(self, sale_id: int, payment_method: str,
+                                   cliente_id: int = None) -> None:
         """Corrige el método de pago de una venta ya cargada (por si se
         cargó mal al momento de la venta). Solo admite pasar a un método
         simple (no a 'mixto'): si la venta tenía un pago dividido, se
         borran sus filas de sale_payments para que no se sigan sumando
         aparte en get_ventas_totales_por_metodo."""
+        # Solo una venta fiada lleva cliente (a quién se le anotó la deuda).
         self.cursor.execute(
-            "UPDATE sales SET payment_method = ? WHERE id = ?",
-            (payment_method, sale_id)
+            "UPDATE sales SET payment_method = ?, cliente_id = ? WHERE id = ?",
+            (payment_method,
+             cliente_id if payment_method == 'fiado' else None, sale_id)
         )
         self.cursor.execute(
             "DELETE FROM sale_payments WHERE sale_id = ?", (sale_id,))
@@ -611,10 +625,11 @@ class Database:
         params = []
         if not incluir_inactivos:
             condiciones.append("c.activo = 1")
-        texto = (texto or '').strip().lower()
+        texto = _normalizar((texto or '').strip())
         if texto:
             condiciones.append(
-                "(LOWER(c.nombre) LIKE ? OR c.telefono LIKE ? OR c.dni LIKE ?)")
+                "(norm(c.nombre) LIKE ? OR norm(c.telefono) LIKE ? "
+                "OR norm(c.dni) LIKE ?)")
             like = f"%{texto}%"
             params += [like, like, like]
         where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
@@ -733,6 +748,108 @@ class Database:
             "DELETE FROM pagos_cliente WHERE id = ?", (pago_id,))
         self.connection.commit()
         return True
+
+    # ===== Resumen por período =====
+
+    def get_resumen_periodo(self, desde: str, hasta: str) -> dict:
+        """Cálculo general de los días entre `desde` y `hasta` (YYYY-MM-DD,
+        ambos incluidos), con la misma lógica que Caja: lo vendido no cuenta
+        el fiado sin cobrar y suma lo cobrado de fiados; el resultado es
+        vendido menos gastos (retiros y bolsillo no son gastos del negocio).
+
+        Devuelve {'dias': [...], 'totales': {...}, 'productos': [...]}, con
+        todos los días del rango (también los que no tuvieron movimiento)."""
+        from datetime import date, timedelta
+
+        d1 = date.fromisoformat(desde)
+        d2 = date.fromisoformat(hasta)
+        dias = {}
+        d = d1
+        while d <= d2:
+            dias[d.isoformat()] = {
+                'fecha': d.isoformat(), 'efectivo': 0.0,
+                'transferencia': 0.0, 'posnet': 0.0, 'fiado': 0.0,
+                'cobros': 0.0, 'gastos': 0.0, 'retiros': 0.0,
+                'ventas': 0, 'total_ventas': 0.0}
+            d += timedelta(days=1)
+        rango = (desde, hasta)
+
+        # Ventas de un solo método (las 'mixto' se reparten abajo)
+        for r in self.execute_query(
+                """SELECT substr(date, 1, 10) AS dia, payment_method,
+                          SUM(total) AS total
+                   FROM sales
+                   WHERE status = 'active' AND payment_method != 'mixto'
+                     AND substr(date, 1, 10) BETWEEN ? AND ?
+                   GROUP BY dia, payment_method""", rango):
+            if r['dia'] in dias and r['payment_method'] in dias[r['dia']]:
+                dias[r['dia']][r['payment_method']] += float(r['total'])
+        for r in self.execute_query(
+                """SELECT substr(s.date, 1, 10) AS dia, sp.payment_method,
+                          SUM(sp.amount) AS total
+                   FROM sale_payments sp JOIN sales s ON s.id = sp.sale_id
+                   WHERE s.status = 'active'
+                     AND substr(s.date, 1, 10) BETWEEN ? AND ?
+                   GROUP BY dia, sp.payment_method""", rango):
+            if r['dia'] in dias and r['payment_method'] in dias[r['dia']]:
+                dias[r['dia']][r['payment_method']] += float(r['total'])
+
+        # Cantidad y monto total de las ventas (incluye las fiadas)
+        for r in self.execute_query(
+                """SELECT substr(date, 1, 10) AS dia, COUNT(*) AS n,
+                          SUM(total) AS total
+                   FROM sales
+                   WHERE status = 'active'
+                     AND substr(date, 1, 10) BETWEEN ? AND ?
+                   GROUP BY dia""", rango):
+            if r['dia'] in dias:
+                dias[r['dia']]['ventas'] = int(r['n'])
+                dias[r['dia']]['total_ventas'] = float(r['total'])
+
+        # Movimientos de Caja: cobros de fiado, gastos y retiros
+        for r in self.execute_query(
+                """SELECT cs.fecha AS dia, cm.tipo, SUM(cm.monto) AS total
+                   FROM caja_movimientos cm
+                   JOIN caja_sesiones cs ON cs.id = cm.sesion_id
+                   WHERE cm.tipo IN ('cobro', 'gasto', 'retiro')
+                     AND cs.fecha BETWEEN ? AND ?
+                   GROUP BY cs.fecha, cm.tipo""", rango):
+            clave = {'cobro': 'cobros', 'gasto': 'gastos',
+                     'retiro': 'retiros'}[r['tipo']]
+            if r['dia'] in dias:
+                dias[r['dia']][clave] += float(r['total'])
+
+        lista = []
+        for dia in sorted(dias):
+            x = dias[dia]
+            x['vendido'] = (x['efectivo'] + x['transferencia'] + x['posnet']
+                            + x['cobros'])
+            x['resultado'] = x['vendido'] - x['gastos']
+            lista.append(x)
+
+        claves = ('efectivo', 'transferencia', 'posnet', 'fiado', 'cobros',
+                  'gastos', 'retiros', 'ventas', 'total_ventas', 'vendido',
+                  'resultado')
+        totales = {k: sum(x[k] for x in lista) for k in claves}
+        totales['ticket_promedio'] = (
+            totales['total_ventas'] / totales['ventas']
+            if totales['ventas'] else 0.0)
+        totales['dias'] = len(lista)
+        totales['fiado_pendiente'] = sum(
+            c['saldo'] for c in self.get_clientes() if c['saldo'] > 0.005)
+
+        productos = self.execute_query(
+            """SELECT p.name AS producto, SUM(sd.quantity) AS cantidad,
+                      SUM(sd.quantity * sd.unit_price) AS monto
+               FROM sale_details sd
+               JOIN products p ON p.id = sd.product_id
+               JOIN sales s ON s.id = sd.sale_id
+               WHERE s.status = 'active'
+                 AND substr(s.date, 1, 10) BETWEEN ? AND ?
+               GROUP BY p.id, p.name
+               ORDER BY cantidad DESC, monto DESC
+               LIMIT 10""", rango)
+        return {'dias': lista, 'totales': totales, 'productos': productos}
 
     def __del__(self):
         # No cerrar la conexión en el destructor ya que es compartida

@@ -70,6 +70,8 @@ class FiadosForm(ttk.Frame):
         ttk.Label(barra, text="  nombre, teléfono o DNI",
                   foreground="#566573").pack(side=LEFT)
 
+        # ↓ desde el buscador pasa a la lista; Enter abre la cuenta
+        self.search_entry.bind('<Down>', lambda e: self._ir_a_lista())
         self.solo_deuda_var = ttk.IntVar(value=0)
         ttk.Checkbutton(
             barra, text="Solo con deuda", variable=self.solo_deuda_var,
@@ -106,6 +108,15 @@ class FiadosForm(ttk.Frame):
         self.vacio_label = ttk.Label(
             self, text="", font=("Segoe UI", 14), foreground="#566573")
         self.vacio_label.pack(anchor=W, pady=(8, 0))
+
+    def _ir_a_lista(self) -> str:
+        items = self.tree.get_children()
+        if items:
+            if not self.tree.selection():
+                self.tree.selection_set(items[0])
+                self.tree.focus(items[0])
+            self.tree.focus_set()
+        return "break"
 
     def load_clientes(self, clientes: list) -> None:
         seleccionado = self.tree.selection()

@@ -172,6 +172,82 @@ class ExportService:
         wb.save(filename)
         return str(filename)
 
+    def export_period_summary_to_excel(self, desde: str, hasta: str,
+                                       resumen: dict) -> str:
+        """Exporta el resumen de un período (totales, día por día y
+        productos más vendidos) a Excel. Devuelve la ruta del archivo."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = self.output_dir / f"resumen_{desde}_a_{hasta}_{timestamp}.xlsx"
+        t = resumen['totales']
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Resumen"
+        header_fill = PatternFill(
+            start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+
+        def titulo(fila, texto):
+            ws.cell(row=fila, column=1, value=texto).font = Font(
+                bold=True, size=14)
+
+        ws.cell(row=1, column=1,
+                value=f"Resumen del {desde} al {hasta}").font = Font(
+                    bold=True, size=16)
+        filas = [
+            ("Total vendido (cobrado)", t['vendido']),
+            ("  Efectivo", t['efectivo']),
+            ("  Transferencia", t['transferencia']),
+            ("  Posnet", t['posnet']),
+            ("  Cobros de fiados", t['cobros']),
+            ("Gastos", t['gastos']),
+            ("Resultado (vendido - gastos)", t['resultado']),
+            ("Retiros del dueño", t['retiros']),
+            ("Fiado otorgado en el período", t['fiado']),
+            ("Fiado pendiente de cobro (total actual)", t['fiado_pendiente']),
+            ("Ventas realizadas (incluye fiadas)", t['ventas']),
+            ("Ticket promedio", t['ticket_promedio']),
+        ]
+        for i, (nombre, valor) in enumerate(filas, start=3):
+            ws.cell(row=i, column=1, value=nombre)
+            c = ws.cell(row=i, column=2, value=float(valor))
+            if nombre not in ("Ventas realizadas (incluye fiadas)",):
+                c.number_format = '$#,##0.00'
+
+        fila = len(filas) + 5
+        titulo(fila, "Día por día")
+        fila += 1
+        for col, h in enumerate(
+                ["Fecha", "Ventas", "Vendido", "Gastos", "Resultado"], 1):
+            c = ws.cell(row=fila, column=col, value=h)
+            c.fill, c.font = header_fill, header_font
+        for d in resumen['dias']:
+            fila += 1
+            ws.cell(row=fila, column=1, value=d['fecha'])
+            ws.cell(row=fila, column=2, value=d['ventas'])
+            for col, k in ((3, 'vendido'), (4, 'gastos'), (5, 'resultado')):
+                ws.cell(row=fila, column=col, value=float(d[k])
+                        ).number_format = '$#,##0.00'
+
+        fila += 2
+        titulo(fila, "Productos más vendidos")
+        fila += 1
+        for col, h in enumerate(["Producto", "Unidades", "Monto"], 1):
+            c = ws.cell(row=fila, column=col, value=h)
+            c.fill, c.font = header_fill, header_font
+        for p in resumen['productos']:
+            fila += 1
+            ws.cell(row=fila, column=1, value=p['producto'])
+            ws.cell(row=fila, column=2, value=int(p['cantidad']))
+            ws.cell(row=fila, column=3, value=float(p['monto'])
+                    ).number_format = '$#,##0.00'
+
+        ws.column_dimensions['A'].width = 42
+        for col in 'BCDE':
+            ws.column_dimensions[col].width = 18
+        wb.save(filename)
+        return str(filename)
+
     def export_inventory_to_excel(self, productos: list[dict[str, Any]]) -> str:
         """
         Exporta el inventario de productos a Excel.

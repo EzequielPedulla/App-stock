@@ -104,3 +104,58 @@ def test_eliminar_cliente_con_historial_no_se_borra(db):
     assert db.delete_cliente(cid) is False
     sin_historial = db.add_cliente('Nadie')
     assert db.delete_cliente(sin_historial) is True
+
+
+def test_resumen_periodo_suma_los_dias_con_la_logica_de_caja(db):
+    cid = db.add_cliente('Ana')
+    # Día 1: 100 efectivo, y una venta fiada de 60 (40 efectivo + 60 fiado)
+    db.add_sale('2026-10-01 10:00:00', 100.0, 100.0, 0.0, 'efectivo')
+    db.add_sale('2026-10-01 11:00:00', 100.0, 40.0, 0.0, 'mixto', [
+        {'method': 'efectivo', 'amount': 40.0},
+        {'method': 'fiado', 'amount': 60.0}], cliente_id=cid)
+    # Día 3: una venta por transferencia y una anulada que no cuenta
+    db.add_sale('2026-10-03 09:00:00', 50.0, 50.0, 0.0, 'transferencia')
+    anulada = db.add_sale('2026-10-03 09:30:00', 999.0, 999.0, 0.0, 'efectivo')
+    db.connection.commit()
+    db.cancel_sale(anulada)
+    # Caja del día 1: un gasto y un cobro de fiado
+    db.create_caja_sesion('2026-10-01', 0.0)
+    ses = db.get_caja_sesion_by_fecha('2026-10-01')
+    db.add_caja_movimiento(ses['id'], 'gasto', 'Luz', 30.0, 'efectivo')
+    db.add_caja_movimiento(ses['id'], 'cobro', 'Cobro', 20.0, 'efectivo')
+    # Fuera del rango: no tiene que contarse
+    db.add_sale('2026-10-09 10:00:00', 500.0, 500.0, 0.0, 'efectivo')
+    db.connection.commit()
+
+    r = db.get_resumen_periodo('2026-10-01', '2026-10-03')
+    t = r['totales']
+    assert t['dias'] == 3 and len(r['dias']) == 3
+    assert t['efectivo'] == 140.0 and t['transferencia'] == 50.0
+    assert t['fiado'] == 60.0
+    assert t['cobros'] == 20.0 and t['gastos'] == 30.0
+    assert t['vendido'] == 140.0 + 50.0 + 20.0
+    assert t['resultado'] == t['vendido'] - 30.0
+    assert t['ventas'] == 3
+    assert t['ticket_promedio'] == pytest.approx((100 + 100 + 50) / 3)
+    # El día sin movimientos igual aparece, en cero
+    assert r['dias'][1]['fecha'] == '2026-10-02' and r['dias'][1]['vendido'] == 0
+
+
+def test_busqueda_ignora_tildes_y_mayusculas(db):
+    db.add_cliente('José Ángel Pérez')
+    assert [c['nombre'] for c in db.get_clientes('jose angel')] == [
+        'José Ángel Pérez']
+    assert [c['nombre'] for c in db.get_clientes('PEREZ')] == [
+        'José Ángel Pérez']
+
+
+def test_cambiar_metodo_de_pago_a_fiado_asigna_cliente_y_sacarlo_lo_borra(db):
+    cid = db.add_cliente('Luz')
+    sale_id = db.add_sale('2026-10-09 10:00:00', 70.0, 70.0, 0.0, 'efectivo')
+    db.connection.commit()
+    db.update_sale_payment_method(sale_id, 'fiado', cid)
+    assert db.get_cliente(cid)['saldo'] == 70.0
+    db.update_sale_payment_method(sale_id, 'efectivo')
+    assert db.get_cliente(cid)['saldo'] == 0.0
+    fila = db.execute_query("SELECT cliente_id FROM sales WHERE id = ?", (sale_id,))
+    assert fila[0]['cliente_id'] is None

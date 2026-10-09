@@ -493,6 +493,15 @@ class SaleController:
             # A quién se le fió (solo si quedó algo sin cobrar)
             cliente_id = getattr(self.sale_form, 'cliente_id', None)
             total = sum(float(item['subtotal']) for item in self.items)
+            # Una venta con algo fiado siempre tiene que tener cliente: si
+            # no, esa deuda no figuraría en ninguna cuenta.
+            hay_fiado = payment_method == 'fiado' or any(
+                p['method'] == 'fiado' for p in (payments or []))
+            if hay_fiado and cliente_id is None:
+                messagebox.showerror(
+                    "Error", "Una venta fiada necesita un cliente. "
+                    "Volvé a elegir Fiado y seleccioná a quién se le anota.")
+                return False
             date = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
 
             # Registrar la venta y todos sus movimientos en una única transacción:

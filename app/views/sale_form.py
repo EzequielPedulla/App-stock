@@ -1,5 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+import time
 import tkinter as tk
 from tkinter import messagebox
 from .cliente_dialogs import show_cliente_picker, confirmar_enter
@@ -17,6 +18,9 @@ class SaleForm(ttk.Frame):
         # Lo setea SaleController: buscar(texto) -> clientes, crear(datos)
         # -> cliente, y chequear_limite(cliente, monto) -> bool.
         self.clientes_api = None
+        # Últimas teclas tipeadas fuera del campo de código de barras, para
+        # detectar un escaneo aunque el cursor no estuviera ahí.
+        self._scan_buffer = []
         self._original_items = []  # Cache de items originales
         self._is_filtering = False  # Flag para saber si estamos filtrando
         self._create_widgets()
@@ -250,6 +254,26 @@ class SaleForm(ttk.Frame):
         )
         self.ultima_venta_label.pack(anchor=tk.E, pady=(5, 0))
 
+        # Hint de atajos de teclado (para no depender del mouse)
+        ttk.Label(
+            self,
+            text="⌨  ↑ ↓ elegir producto del carrito  ·  F2 editar  ·  "
+                 "Supr quitar  ·  F10 Varios  ·  F5 vaciar  ·  Ctrl+1/2/3 "
+                 "cambiar de venta",
+            font=("Segoe UI", 13), foreground="#566573"
+        ).pack(anchor=tk.W, pady=(6, 0))
+
+        # Escaneo: si se tipea un código y Enter sin tener el cursor en el
+        # campo de código de barras, igual se agrega a la venta.
+        self.bind_all('<KeyPress>', self._on_key_for_scan, add='+')
+        # Flechas para moverse por el carrito sin mouse
+        for entry in (self.barcode_entry, self.qty_entry):
+            entry.bind('<Up>', lambda e: self._mover_seleccion(-1))
+            entry.bind('<Down>', lambda e: self._mover_seleccion(1))
+        self.tree.bind('<Up>', lambda e: self._mover_seleccion(-1))
+        self.tree.bind('<Down>', lambda e: self._mover_seleccion(1))
+        self.bind_all('<F2>', self._on_f2_pressed)
+        self.barcode_entry.bind('<Delete>', self._on_delete_en_codigo)
         # Vincular la tecla Enter a la ventana principal
         self.bind_all('<Return>', self._on_enter_pressed)
         # F10 para agregar un artículo Varios sin tocar el mouse
@@ -260,6 +284,107 @@ class SaleForm(ttk.Frame):
         for i in range(3):
             self.bind_all(f'<Control-Key-{i + 1}>',
                           lambda e, idx=i: self._on_switch_slot_shortcut(idx))
+
+    def _mover_seleccion(self, delta: int) -> str:
+        """Mueve la selección del carrito con las flechas arriba/abajo."""
+        items = self.tree.get_children()
+        if not items:
+            return "break"
+        actual = self.tree.selection()
+        idx = items.index(actual[0]) + delta if actual else (
+            0 if delta > 0 else len(items) - 1)
+        idx = max(0, min(len(items) - 1, idx))
+        self.tree.selection_set(items[idx])
+        self.tree.focus(items[idx])
+        self.tree.see(items[idx])
+        return "break"
+
+    def _on_f2_pressed(self, event) -> None:
+        """F2 edita el producto seleccionado del carrito."""
+        if self.winfo_ismapped() and self.tree.selection():
+            self.edit_button.invoke()
+
+    def _on_delete_en_codigo(self, event):
+        """Supr en el código de barras vacío quita el producto seleccionado
+        del carrito (si hay texto escrito, borra el carácter como siempre)."""
+        if not self.barcode_entry.get() and self.tree.selection():
+            self.delete_button.invoke()
+            return "break"
+
+    # --- Escaneo de código de barras con el cursor en cualquier lado ---
+
+    _ESC_ENTRADAS = ('TEntry', 'Entry', 'TCombobox', 'TSpinbox', 'Text')
+    _TECLAS_QUE_CORTAN = ('Tab', 'Escape', 'Up', 'Down', 'Left', 'Right',
+                          'Delete', 'Home', 'End', 'Prior', 'Next')
+
+    def _en_ventana_principal(self, widget) -> bool:
+        """True si el evento viene de la ventana principal (no de un
+        diálogo, donde se está escribiendo otra cosa)."""
+        try:
+            return widget.winfo_toplevel() is self.winfo_toplevel()
+        except Exception:
+            return False
+
+    def _on_key_for_scan(self, event) -> None:
+        """Va anotando lo tipeado mientras el foco NO está en el código de
+        barras; si después llega un Enter se interpreta como un escaneo."""
+        if not self.winfo_ismapped() or not self._en_ventana_principal(
+                event.widget):
+            return
+        if event.widget is self.barcode_entry:
+            self._scan_buffer.clear()
+            return
+        ahora = time.time()
+        if self._scan_buffer and ahora - self._scan_buffer[-1][1] > 1.0:
+            self._scan_buffer.clear()
+        ch = event.char
+        if len(ch) == 1 and ch.isprintable() and not (event.state & 0x4):
+            en_campo = event.widget.winfo_class() in self._ESC_ENTRADAS
+            # Lo tipeado en un campo (ej. una cantidad) y lo tipeado sin
+            # ningún campo enfocado no se mezclan.
+            if self._scan_buffer and self._scan_buffer[-1][2] != en_campo:
+                self._scan_buffer.clear()
+            self._scan_buffer.append((ch, ahora, en_campo))
+        elif event.keysym == 'BackSpace':
+            if self._scan_buffer:
+                self._scan_buffer.pop()
+        elif event.keysym in self._TECLAS_QUE_CORTAN:
+            self._scan_buffer.clear()
+
+    def _leer_escaneo(self, widget):
+        """Si lo último tipeado fuera del código de barras parece un
+        escaneo, lo devuelve (y lo saca del campo donde cayó)."""
+        buf = self._scan_buffer
+        if not buf or time.time() - buf[-1][1] > 1.0:
+            buf.clear()
+            return None
+        if widget.winfo_class() not in self._ESC_ENTRADAS:
+            # Cursor en un botón, la tabla, etc.: nada recibió las teclas,
+            # así que lo tipeado antes del Enter es el código.
+            codigo = ''.join(c for c, _, en_campo in buf
+                             if not en_campo).strip()
+            buf.clear()
+            return codigo or None
+        # Cursor en otro campo (ej. cantidad): solo se toma como escaneo
+        # si llegó a la velocidad de un lector (varias teclas muy seguidas).
+        if not buf[-1][2]:
+            buf.clear()
+            return None
+        n = 1
+        while n < len(buf) and buf[-n][1] - buf[-n - 1][1] < 0.08:
+            n += 1
+        if n < 4:
+            buf.clear()
+            return None
+        codigo = ''.join(c for c, _, _ in buf[-n:]).strip()
+        buf.clear()
+        try:
+            texto = widget.get()
+            if codigo and texto.endswith(codigo):
+                widget.delete(len(texto) - len(codigo), 'end')
+        except Exception:
+            pass
+        return codigo or None
 
     def _on_f10_pressed(self, event) -> None:
         """Abre el diálogo de Varios con F10, solo si esta pestaña está
@@ -403,6 +528,11 @@ class SaleForm(ttk.Frame):
             text=f"Total a pagar: ${total:.2f}",
             font=("Segoe UI", 16)
         ).pack(pady=(0, 10))
+
+        ttk.Label(
+            main_frame, text="⌨ ↑ ↓ cambia el método de pago  ·  Enter confirma",
+            font=("Segoe UI", 13), foreground="#566573"
+        ).pack(pady=(0, 8))
 
         # Método de pago (por defecto Efectivo)
         self.payment_method = 'efectivo'
@@ -584,6 +714,33 @@ class SaleForm(ttk.Frame):
                 payment_entry.configure(state='disabled')
                 change_label.configure(text="Pago exacto (sin vuelto)")
 
+        orden_metodos = ['efectivo', 'transferencia', 'posnet', 'fiado',
+                         'mixto']
+
+        def mover_metodo(delta):
+            """Flechas: cambia el método de pago sin usar el mouse."""
+            i = orden_metodos.index(self.payment_method)
+            select_method(orden_metodos[(i + delta) % len(orden_metodos)])
+            if self.payment_method != 'mixto':
+                if str(payment_entry.cget('state')) == 'normal':
+                    payment_entry.focus()
+                else:
+                    self._payment_dialog.focus_set()
+            return "break"
+
+        def flecha_horizontal(delta, event):
+            # En un campo de texto, ← → mueven el cursor como siempre.
+            if event.widget.winfo_class() in ('TEntry', 'Entry'):
+                return None
+            return mover_metodo(delta)
+
+        self._payment_dialog.bind('<Up>', lambda e: mover_metodo(-1))
+        self._payment_dialog.bind('<Down>', lambda e: mover_metodo(1))
+        self._payment_dialog.bind(
+            '<Left>', lambda e: flecha_horizontal(-1, e))
+        self._payment_dialog.bind(
+            '<Right>', lambda e: flecha_horizontal(1, e))
+
         # Vincular el cálculo al cambio en cada entry
         payment_entry.bind('<KeyRelease>', lambda e: calculate_change())
         efectivo_entry.bind('<KeyRelease>', lambda e: calculate_mixto())
@@ -750,6 +907,17 @@ class SaleForm(ttk.Frame):
         # termina abriendo el diálogo de confirmar venta.
         if not self.winfo_ismapped():
             return
+
+        # Un código escaneado con el cursor fuera del campo de código de
+        # barras: se agrega igual (y no se abre el cobro).
+        if event.widget is not self.barcode_entry and (
+                self._en_ventana_principal(event.widget)):
+            codigo = self._leer_escaneo(event.widget)
+            if codigo:
+                self.barcode_entry.delete(0, 'end')
+                self.barcode_entry.insert(0, codigo)
+                self.event_generate("<<AddItem>>")
+                return "break"
 
         # Si el foco está en los campos de entrada, no hacer nada
         if event.widget in (self.barcode_entry, self.qty_entry):
@@ -1176,6 +1344,24 @@ class SaleForm(ttk.Frame):
         agregar_btn.configure(command=agregar)
         tree.bind('<Double-1>', agregar)
         qty_entry.bind('<Return>', agregar)
+        tree.bind('<Return>', agregar)
+
+        def mover(delta):
+            items = tree.get_children()
+            if not items:
+                return "break"
+            sel = tree.selection()
+            idx = items.index(sel[0]) + delta if sel else 0
+            idx = max(0, min(len(items) - 1, idx))
+            tree.selection_set(items[idx])
+            tree.focus(items[idx])
+            tree.see(items[idx])
+            return "break"
+
+        # Desde el buscador: ↑ ↓ eligen el producto y Enter lo agrega
+        search_entry.bind('<Down>', lambda e: mover(1))
+        search_entry.bind('<Up>', lambda e: mover(-1))
+        search_entry.bind('<Return>', agregar)
 
         ttk.Button(
             main_frame,

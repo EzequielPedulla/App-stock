@@ -8,7 +8,7 @@ from .caja_form import CajaForm
 from .report_form import ReportForm
 from .fiados_form import FiadosForm
 from .scrollable_frame import ScrollableFrame
-from .estilos import fix_label_backgrounds
+from .estilos import fix_label_backgrounds, configurar_idioma
 from .owner_dialogs import pedir_clave, cambiar_clave
 from ..security import owner_lock
 
@@ -19,6 +19,7 @@ class MainWindow(ttk.Window):
                          themename="flatly")
         self.resizable(True, True)
         self.minsize(1024, 700)
+        configurar_idioma()
         self._ajustar_tamano_inicial()
         self._setup_custom_styles()
         self._create_widgets()
@@ -177,7 +178,15 @@ class MainWindow(ttk.Window):
 
         fix_label_backgrounds(self)
         self._iniciar_modo_dueno()
+        self._iniciar_atajos_pestanas()
         self.show_products()
+
+    def _iniciar_atajos_pestanas(self) -> None:
+        """Alt+1..5 cambia de pestaña sin usar el mouse."""
+        for i, accion in enumerate((
+                self.show_products, self.show_sales, self.show_caja,
+                self.show_fiados, self.show_reports), start=1):
+            self.bind_all(f'<Alt-Key-{i}>', lambda e, a=accion: a())
 
     def _iniciar_modo_dueno(self) -> None:
         """Conecta el candado de dueño: cada vez que se bloquea o desbloquea
