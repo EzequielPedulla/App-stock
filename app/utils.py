@@ -27,3 +27,12 @@ def formatear_fecha_hora(fecha) -> str:
         return dt.strftime('%d/%m/%Y')
     except ValueError:
         return texto
+
+
+_DIAS_SEMANA = ('Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom')
+
+
+def texto_dia(fecha_iso: str) -> str:
+    """'2026-10-14' -> 'Mié 14/10' (día de la semana en español)."""
+    d = datetime.strptime(fecha_iso[:10], '%Y-%m-%d')
+    return f"{_DIAS_SEMANA[d.weekday()]} {d.strftime('%d/%m')}"

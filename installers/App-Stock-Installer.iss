@@ -26,6 +26,8 @@ OutputBaseFilename=App-Stock-Installer-v{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\assets\icono.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 MinVersion=6.1sp1
 PrivilegesRequired=admin

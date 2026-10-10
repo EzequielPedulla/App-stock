@@ -36,7 +36,7 @@ def show_cliente_form(parent, on_save, cliente: dict = None) -> None:
     editando = cliente is not None
     dialog = ttk.Toplevel(parent)
     dialog.title("Editar cliente" if editando else "Nuevo cliente")
-    dialog.geometry("582x736")
+    dialog.geometry("640x830")
     dialog.resizable(False, False)
     dialog.transient(parent)
     dialog.grab_set()
@@ -76,6 +76,16 @@ def show_cliente_form(parent, on_save, cliente: dict = None) -> None:
           else (TAPADO if limite is not None else ''))
     if not limite_editable:
         entries['limite'].configure(state='disabled')
+    # Deuda que ya tenía en el cuaderno de papel: también solo la carga o
+    # cambia el dueño (si no, cualquiera podría borrar o inventar deudas).
+    saldo_ini = float(c.get('saldo_inicial') or 0.0)
+    campo('saldo_inicial',
+          "Deuda anterior del cuaderno en $" if limite_editable else
+          "Deuda anterior del cuaderno (solo el dueño)",
+          (f"{saldo_ini:.2f}" if saldo_ini and limite_editable
+           else (TAPADO if saldo_ini else '')))
+    if not limite_editable:
+        entries['saldo_inicial'].configure(state='disabled')
     campo('notas', "Notas (opcional)", c.get('notas', ''))
     entries['nombre'].focus()
 
@@ -96,6 +106,17 @@ def show_cliente_form(parent, on_save, cliente: dict = None) -> None:
             messagebox.showerror("Error", "Ingrese un límite válido",
                                  parent=dialog)
             return
+        try:
+            if limite_editable:
+                saldo_val = parse_monto(entries['saldo_inicial'].get()) or 0.0
+                if saldo_val < 0:
+                    raise ValueError
+            else:
+                saldo_val = saldo_ini
+        except ValueError:
+            messagebox.showerror("Error", "Ingrese una deuda anterior válida",
+                                 parent=dialog)
+            return
         data = {
             'nombre': nombre,
             'telefono': entries['telefono'].get().strip(),
@@ -103,6 +124,7 @@ def show_cliente_form(parent, on_save, cliente: dict = None) -> None:
             'direccion': entries['direccion'].get().strip(),
             'notas': entries['notas'].get().strip(),
             'limite': limite_val,
+            'saldo_inicial': saldo_val,
         }
         if on_save(data):
             dialog.destroy()

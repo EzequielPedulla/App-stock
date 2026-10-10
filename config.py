@@ -35,3 +35,10 @@ def _default_db_path() -> Path:
 
 
 DB_PATH = _default_db_path()
+
+
+def resource_path(relativo: str) -> Path:
+    """Ruta a un archivo incluido con la app (ej. el ícono), tanto
+    corriendo desde el código como desde el .exe de PyInstaller."""
+    base = Path(getattr(sys, '_MEIPASS', Path(__file__).parent))
+    return base / relativo

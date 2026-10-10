@@ -266,7 +266,9 @@ class FiadosForm(ttk.Frame):
                     pagos_por_item[iid] = m['pago_id']
                 monto = m['monto']
                 tree.insert('', END, iid=iid, tags=tags, values=(
-                    formatear_fecha_hora(m['fecha']), m['tipo'], m['detalle'],
+                    ('Cuaderno' if m.get('anterior')
+                     else formatear_fecha_hora(m['fecha'])),
+                    m['tipo'], m['detalle'],
                     f"-${-monto:.2f}" if monto < 0 else f"+${monto:.2f}",
                     f"${m['saldo']:.2f}" if m['cuenta'] else "—"))
 
@@ -334,6 +336,13 @@ class FiadosForm(ttk.Frame):
         """Detalle de un movimiento de la cuenta: qué se compró (con
         precios y cómo se pagó) o los datos del pago."""
         ctrl = self.fiados_controller
+        if mov.get('anterior'):
+            messagebox.showinfo(
+                "Saldo anterior",
+                f"Esta es la deuda de ${mov['monto']:.2f} que ya estaba "
+                "anotada en el cuaderno de papel cuando se cargó el cliente "
+                "en la app.\nNo tiene detalle de productos.", parent=parent)
+            return
         dialog = ttk.Toplevel(parent)
         es_pago = mov['tipo'] == 'Pago'
         dialog.title("Detalle del pago" if es_pago else "Detalle de la compra")

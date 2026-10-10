@@ -7,10 +7,13 @@ from .sale_form import SaleForm
 from .caja_form import CajaForm
 from .report_form import ReportForm
 from .fiados_form import FiadosForm
+from .pedidos_form import PedidosForm
 from .scrollable_frame import ScrollableFrame
-from .estilos import fix_label_backgrounds, configurar_idioma
+from .estilos import (
+    fix_label_backgrounds, configurar_idioma, instalar_icono_en_dialogos)
 from .owner_dialogs import pedir_clave, cambiar_clave
 from ..security import owner_lock
+from config import resource_path
 
 
 class MainWindow(ttk.Window):
@@ -20,9 +23,24 @@ class MainWindow(ttk.Window):
         self.resizable(True, True)
         self.minsize(1024, 700)
         configurar_idioma()
+        self._poner_icono()
         self._ajustar_tamano_inicial()
         self._setup_custom_styles()
         self._create_widgets()
+
+    def _poner_icono(self) -> None:
+        """Ícono de la app en la ventana, la barra de tareas y todos los
+        diálogos. Si el archivo no está, se sigue con el ícono por defecto.
+
+        Se usa iconbitmap con el .ico directo sobre cada ventana: en Windows
+        ni iconphoto ni iconbitmap(default=...) lo muestran (ttkbootstrap
+        deja su ícono propio)."""
+        ico = resource_path('assets/icono.ico')
+        try:
+            self.iconbitmap(str(ico))
+        except tk.TclError:
+            pass
+        instalar_icono_en_dialogos(ico)
 
     def _ajustar_tamano_inicial(self) -> None:
         """Usa la mayor parte de la pantalla disponible, sin superar un
@@ -170,6 +188,13 @@ class MainWindow(ttk.Window):
         self.fiados_form = FiadosForm(fiados_scroll.interior)
         self.fiados_form.pack(fill=BOTH, expand=True)
 
+        # Frame para pedidos a proveedores
+        self.pedidos_frame = tk.Frame(self.contenido_interno, bg="white")
+        pedidos_scroll = ScrollableFrame(self.pedidos_frame)
+        pedidos_scroll.pack(fill=BOTH, expand=True)
+        self.pedidos_form = PedidosForm(pedidos_scroll.interior)
+        self.pedidos_form.pack(fill=BOTH, expand=True)
+
         self.reports_frame = tk.Frame(self.contenido_interno, bg="white")
         reports_scroll = ScrollableFrame(self.reports_frame)
         reports_scroll.pack(fill=BOTH, expand=True)
@@ -182,10 +207,11 @@ class MainWindow(ttk.Window):
         self.show_products()
 
     def _iniciar_atajos_pestanas(self) -> None:
-        """Alt+1..5 cambia de pestaña sin usar el mouse."""
+        """Alt+1..6 cambia de pestaña sin usar el mouse."""
         for i, accion in enumerate((
                 self.show_products, self.show_sales, self.show_caja,
-                self.show_fiados, self.show_reports), start=1):
+                self.show_fiados, self.show_pedidos,
+                self.show_reports), start=1):
             self.bind_all(f'<Alt-Key-{i}>', lambda e, a=accion: a())
 
     def _iniciar_modo_dueno(self) -> None:
@@ -224,6 +250,7 @@ class MainWindow(ttk.Window):
         self._actualizar_boton_dueno()
         for form, nombre in ((self.caja_form, 'caja_controller'),
                              (self.fiados_form, 'fiados_controller'),
+                             (self.pedidos_form, 'pedidos_controller'),
                              (self.report_form, 'report_controller')):
             controlador = getattr(form, nombre, None)
             if controlador:
@@ -236,9 +263,11 @@ class MainWindow(ttk.Window):
             ("💰", "Ventas", self.show_sales),
             ("🧮", "Caja", self.show_caja),
             ("📒", "Fiados", self.show_fiados),
+            ("🚚", "Pedidos", self.show_pedidos),
             ("📊", "Reportes", self.show_reports)
         ]
 
+        self.menu_buttons = {}
         for icon, text, command in buttons_data:
             # Frame para cada botón
             btn_frame = ttk.Frame(container, bootstyle="dark")
@@ -250,6 +279,7 @@ class MainWindow(ttk.Window):
                              style="Custom.TButton",
                              command=command)
             btn.pack(fill=X)
+            self.menu_buttons[text] = btn
 
     def show_products(self):
         """Muestra la sección de productos y actualiza el título."""
@@ -257,6 +287,7 @@ class MainWindow(ttk.Window):
         self.caja_frame.pack_forget()
         self.reports_frame.pack_forget()
         self.fiados_frame.pack_forget()
+        self.pedidos_frame.pack_forget()
         self.productos_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Productos")
 
@@ -266,6 +297,7 @@ class MainWindow(ttk.Window):
         self.caja_frame.pack_forget()
         self.reports_frame.pack_forget()
         self.fiados_frame.pack_forget()
+        self.pedidos_frame.pack_forget()
         self.ventas_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Ventas")
 
@@ -275,6 +307,7 @@ class MainWindow(ttk.Window):
         self.ventas_frame.pack_forget()
         self.reports_frame.pack_forget()
         self.fiados_frame.pack_forget()
+        self.pedidos_frame.pack_forget()
         self.caja_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Caja")
         if getattr(self.caja_form, 'caja_controller', None):
@@ -286,16 +319,38 @@ class MainWindow(ttk.Window):
         self.ventas_frame.pack_forget()
         self.caja_frame.pack_forget()
         self.reports_frame.pack_forget()
+        self.pedidos_frame.pack_forget()
         self.fiados_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Fiados")
         if getattr(self.fiados_form, 'fiados_controller', None):
             self.fiados_form.fiados_controller.refresh()
+
+    def show_pedidos(self):
+        """Muestra los pedidos a proveedores y actualiza el título."""
+        self.productos_frame.pack_forget()
+        self.ventas_frame.pack_forget()
+        self.caja_frame.pack_forget()
+        self.reports_frame.pack_forget()
+        self.fiados_frame.pack_forget()
+        self.pedidos_frame.pack(fill=BOTH, expand=True)
+        self.titulo_label.config(text="Pedidos")
+        if getattr(self.pedidos_form, 'pedidos_controller', None):
+            self.pedidos_form.pedidos_controller.refresh()
+
+    def set_badge_pedidos(self, cantidad: int) -> None:
+        """Muestra en el menú cuántos pedidos vienen hoy, mañana o están
+        atrasados."""
+        btn = self.menu_buttons.get("Pedidos")
+        if btn:
+            btn.configure(text="🚚  Pedidos" + (f" ({cantidad})" if cantidad
+                                               else ""))
 
     def show_reports(self):
         self.productos_frame.pack_forget()
         self.ventas_frame.pack_forget()
         self.caja_frame.pack_forget()
         self.fiados_frame.pack_forget()
+        self.pedidos_frame.pack_forget()
         self.reports_frame.pack(fill=BOTH, expand=True)
         self.titulo_label.config(text="Reportes")
         if getattr(self.report_form, 'report_controller', None):

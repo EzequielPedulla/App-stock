@@ -92,6 +92,10 @@ class OwnerLock:
     def touch(self) -> None:
         self._ultima_actividad = time.time()
 
+    def segundos_inactivo(self) -> float:
+        """Cuánto hace que nadie toca la app (teclado o mouse)."""
+        return time.time() - self._ultima_actividad
+
     def check_autolock(self) -> None:
         if self._unlocked and (
                 time.time() - self._ultima_actividad > self.AUTOLOCK_SEGUNDOS):

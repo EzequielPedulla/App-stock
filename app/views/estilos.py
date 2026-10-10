@@ -52,3 +52,24 @@ def configurar_idioma() -> None:
     for en, es in (('Mo', 'Lu'), ('Tu', 'Ma'), ('We', 'Mi'), ('Th', 'Ju'),
                    ('Fr', 'Vi'), ('Sa', 'Sá'), ('Su', 'Do')):
         MessageCatalog.set('es', en, es)
+
+
+_icono_instalado = False
+
+
+def instalar_icono_en_dialogos(ico) -> None:
+    """Hace que todos los diálogos (Toplevel de ttkbootstrap) lleven el
+    ícono de la app en vez del de ttkbootstrap. Se instala una sola vez."""
+    global _icono_instalado
+    if _icono_instalado or not ico.exists():
+        return
+    _icono_instalado = True
+    original = ttk.Toplevel.__init__
+
+    def con_icono(self, *args, **kwargs):
+        original(self, *args, **kwargs)
+        try:
+            self.iconbitmap(str(ico))
+        except Exception:
+            pass
+    ttk.Toplevel.__init__ = con_icono

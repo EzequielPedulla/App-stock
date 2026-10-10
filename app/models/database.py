@@ -1,3 +1,4 @@
+import calendar
 import sqlite3
 import unicodedata
 from datetime import datetime
@@ -118,6 +119,7 @@ class Database:
                 direccion VARCHAR(150) NOT NULL DEFAULT '',
                 notas TEXT NOT NULL DEFAULT '',
                 limite REAL NULL,
+                saldo_inicial REAL NOT NULL DEFAULT 0,
                 activo INTEGER NOT NULL DEFAULT 1,
                 created_at DATETIME NOT NULL
             )
@@ -143,9 +145,40 @@ class Database:
             )
         ''')
 
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS proveedores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre VARCHAR(100) NOT NULL,
+                telefono VARCHAR(30) NOT NULL DEFAULT '',
+                activo INTEGER NOT NULL DEFAULT 1
+            )
+        ''')
+
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pedidos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                proveedor_id INTEGER NOT NULL,
+                fecha_estimada DATE NOT NULL,
+                monto_estimado REAL NOT NULL DEFAULT 0,
+                nota VARCHAR(200) NOT NULL DEFAULT '',
+                estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+                monto_final REAL NULL,
+                forma_pago VARCHAR(20) NULL,
+                fecha_recibido DATETIME NULL,
+                movimiento_id INTEGER NULL,
+                tipo VARCHAR(20) NOT NULL DEFAULT 'pedido',
+                repetir VARCHAR(20) NOT NULL DEFAULT 'no',
+                siguiente_id INTEGER NULL,
+                created_at DATETIME NOT NULL,
+                FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+            )
+        ''')
+
         self._migrate_add_payment_method_column()
         self._migrate_add_forma_pago_column()
         self._migrate_add_cliente_id_column()
+        self._migrate_add_saldo_inicial_column()
+        self._migrate_add_pedidos_servicio_columns()
         self.connection.commit()
 
     def _migrate_add_payment_method_column(self):
@@ -169,6 +202,36 @@ class Database:
                 "ALTER TABLE caja_movimientos ADD COLUMN forma_pago "
                 "VARCHAR(20) NOT NULL DEFAULT 'efectivo'"
             )
+
+    def _migrate_add_pedidos_servicio_columns(self):
+        """Agrega a pedidos el tipo (pedido a proveedor o servicio/pago), la
+        repetición (no/semanal/mensual) y el vínculo con el siguiente que se
+        crea solo, en bases anteriores a los recordatorios de pagos."""
+        self.cursor.execute("PRAGMA table_info(pedidos)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if not columns:
+            return
+        if 'tipo' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE pedidos ADD COLUMN tipo VARCHAR(20) "
+                "NOT NULL DEFAULT 'pedido'")
+        if 'repetir' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE pedidos ADD COLUMN repetir VARCHAR(20) "
+                "NOT NULL DEFAULT 'no'")
+        if 'siguiente_id' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE pedidos ADD COLUMN siguiente_id INTEGER NULL")
+
+    def _migrate_add_saldo_inicial_column(self):
+        """Agrega saldo_inicial a clientes (la deuda que ya tenían anotada en
+        el cuaderno de papel cuando se cargaron en la app)."""
+        self.cursor.execute("PRAGMA table_info(clientes)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if 'saldo_inicial' not in columns:
+            self.cursor.execute(
+                "ALTER TABLE clientes ADD COLUMN saldo_inicial REAL "
+                "NOT NULL DEFAULT 0")
 
     def _migrate_add_cliente_id_column(self):
         """Agrega cliente_id a sales (a quién se le fió la venta) en bases
@@ -574,26 +637,33 @@ class Database:
 
     def add_cliente(self, nombre: str, telefono: str = '', dni: str = '',
                     direccion: str = '', notas: str = '',
-                    limite: float = None) -> int:
+                    limite: float = None, saldo_inicial: float = 0.0) -> int:
+        """`saldo_inicial` es la deuda que ya tenía anotada en el cuaderno de
+        papel: cuenta en lo que debe, pero no es una venta (no aparece en
+        Reportes ni en Caja hasta que la pague)."""
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.cursor.execute(
             """INSERT INTO clientes
-               (nombre, telefono, dni, direccion, notas, limite, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (nombre, telefono, dni, direccion, notas, limite, now)
+               (nombre, telefono, dni, direccion, notas, limite,
+                saldo_inicial, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (nombre, telefono, dni, direccion, notas, limite,
+             saldo_inicial, now)
         )
         self.connection.commit()
         return self.cursor.lastrowid
 
     def update_cliente(self, cliente_id: int, nombre: str, telefono: str,
                        dni: str, direccion: str, notas: str,
-                       limite: float = None) -> None:
+                       limite: float = None,
+                       saldo_inicial: float = 0.0) -> None:
         self.cursor.execute(
             """UPDATE clientes
                SET nombre = ?, telefono = ?, dni = ?, direccion = ?,
-                   notas = ?, limite = ?
+                   notas = ?, limite = ?, saldo_inicial = ?
                WHERE id = ?""",
-            (nombre, telefono, dni, direccion, notas, limite, cliente_id)
+            (nombre, telefono, dni, direccion, notas, limite, saldo_inicial,
+             cliente_id)
         )
         self.connection.commit()
 
@@ -608,8 +678,10 @@ class Database:
         historial hay que desactivarlo (set_cliente_activo)."""
         usado = self.execute_query(
             """SELECT (SELECT COUNT(*) FROM sales WHERE cliente_id = ?) +
-                      (SELECT COUNT(*) FROM pagos_cliente WHERE cliente_id = ?)
-               AS n""", (cliente_id, cliente_id))
+                      (SELECT COUNT(*) FROM pagos_cliente WHERE cliente_id = ?) +
+                      (SELECT COUNT(*) FROM clientes
+                       WHERE id = ? AND saldo_inicial > 0)
+               AS n""", (cliente_id, cliente_id, cliente_id))
         if usado and int(usado[0]['n']) > 0:
             return False
         self.cursor.execute("DELETE FROM clientes WHERE id = ?", (cliente_id,))
@@ -635,7 +707,8 @@ class Database:
         where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
         rows = self.execute_query(
             f"""SELECT c.*,
-                  COALESCE((SELECT SUM({self._FIADO_DE_VENTA})
+                  c.saldo_inicial + COALESCE((
+                            SELECT SUM({self._FIADO_DE_VENTA})
                             FROM sales s
                             WHERE s.cliente_id = c.id AND s.status = 'active'),
                            0) AS total_fiado,
@@ -850,6 +923,189 @@ class Database:
                ORDER BY cantidad DESC, monto DESC
                LIMIT 10""", rango)
         return {'dias': lista, 'totales': totales, 'productos': productos}
+
+    # ===== Pedidos a proveedores =====
+
+    def get_proveedores(self) -> list:
+        return self.execute_query(
+            "SELECT * FROM proveedores WHERE activo = 1 ORDER BY nombre")
+
+    def get_or_create_proveedor(self, nombre: str, telefono: str = '') -> int:
+        """Id del proveedor con ese nombre (sin distinguir mayúsculas ni
+        tildes); si no existe lo crea."""
+        buscado = _normalizar(nombre.strip())
+        for p in self.execute_query("SELECT id, nombre FROM proveedores"):
+            if _normalizar(p['nombre'].strip()) == buscado:
+                self.cursor.execute(
+                    "UPDATE proveedores SET activo = 1 WHERE id = ?",
+                    (p['id'],))
+                self.connection.commit()
+                return p['id']
+        self.cursor.execute(
+            "INSERT INTO proveedores (nombre, telefono) VALUES (?, ?)",
+            (nombre.strip(), telefono.strip()))
+        self.connection.commit()
+        return self.cursor.lastrowid
+
+    @staticmethod
+    def _sumar_periodo(fecha_iso: str, repetir: str) -> str:
+        """Fecha del siguiente vencimiento: una semana después, o el mismo
+        día del mes siguiente (si ese mes no tiene ese día, el último)."""
+        from datetime import date, timedelta
+        d = date.fromisoformat(fecha_iso)
+        if repetir == 'semanal':
+            return (d + timedelta(days=7)).isoformat()
+        mes = d.month % 12 + 1
+        anio = d.year + (1 if d.month == 12 else 0)
+        dia = min(d.day, calendar.monthrange(anio, mes)[1])
+        return date(anio, mes, dia).isoformat()
+
+    def add_pedido(self, proveedor_id: int, fecha_estimada: str,
+                   monto_estimado: float, nota: str = '',
+                   tipo: str = 'pedido', repetir: str = 'no') -> int:
+        """`tipo` es 'pedido' (a un proveedor) o 'servicio' (luz, alquiler,
+        impuestos...). `repetir` es 'no', 'semanal' o 'mensual': al marcarlo
+        como pagado se crea solo el siguiente."""
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.cursor.execute(
+            """INSERT INTO pedidos
+               (proveedor_id, fecha_estimada, monto_estimado, nota, tipo,
+                repetir, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (proveedor_id, fecha_estimada, monto_estimado, nota, tipo,
+             repetir, now))
+        self.connection.commit()
+        return self.cursor.lastrowid
+
+    def update_pedido(self, pedido_id: int, proveedor_id: int,
+                      fecha_estimada: str, monto_estimado: float,
+                      nota: str, tipo: str = 'pedido',
+                      repetir: str = 'no') -> None:
+        self.cursor.execute(
+            """UPDATE pedidos
+               SET proveedor_id = ?, fecha_estimada = ?, monto_estimado = ?,
+                   nota = ?, tipo = ?, repetir = ?
+               WHERE id = ?""",
+            (proveedor_id, fecha_estimada, monto_estimado, nota, tipo,
+             repetir, pedido_id))
+        self.connection.commit()
+
+    def get_pedido(self, pedido_id: int):
+        r = self.execute_query(
+            """SELECT p.*, pr.nombre AS proveedor, pr.telefono AS telefono
+               FROM pedidos p JOIN proveedores pr ON pr.id = p.proveedor_id
+               WHERE p.id = ?""", (pedido_id,))
+        return r[0] if r else None
+
+    def get_pedidos(self, estados: list = None) -> list:
+        """Pedidos (con el nombre del proveedor), por fecha de llegada.
+        `estados` filtra por estado ('pendiente', 'recibido', 'cancelado')."""
+        where, params = "", ()
+        if estados:
+            where = "WHERE p.estado IN (%s)" % ",".join("?" * len(estados))
+            params = tuple(estados)
+        return self.execute_query(
+            f"""SELECT p.*, pr.nombre AS proveedor, pr.telefono AS telefono
+                FROM pedidos p JOIN proveedores pr ON pr.id = p.proveedor_id
+                {where}
+                ORDER BY p.fecha_estimada, p.id""", params)
+
+    def set_pedido_cancelado(self, pedido_id: int) -> None:
+        self.cursor.execute(
+            "UPDATE pedidos SET estado = 'cancelado' WHERE id = ? "
+            "AND estado = 'pendiente'", (pedido_id,))
+        self.connection.commit()
+
+    def delete_pedido(self, pedido_id: int) -> bool:
+        """Borra un pedido que todavía no se recibió (uno recibido tiene un
+        gasto en Caja asociado: primero hay que deshacer la recepción)."""
+        pedido = self.get_pedido(pedido_id)
+        if not pedido or pedido['estado'] == 'recibido':
+            return False
+        self.cursor.execute("DELETE FROM pedidos WHERE id = ?", (pedido_id,))
+        self.connection.commit()
+        return True
+
+    def recibir_pedido(self, pedido_id: int, monto_final: float,
+                       forma_pago: str):
+        """Confirma que llegó un pedido: guarda lo realmente pagado y cómo,
+        y lo anota como gasto en la Caja de hoy (si sigue abierta).
+        Devuelve True si quedó anotado en Caja, False si la caja de hoy ya
+        estaba cerrada (el pedido igual queda recibido), o None si el
+        pedido no se puede recibir (ya recibido o cancelado).
+
+        `forma_pago` puede ser 'efectivo', 'transferencia' o 'bolsillo' (lo
+        pagó el dueño de su bolsillo): en ese caso en Caja queda como
+        "pago de bolsillo", que no mueve el efectivo del cajón ni cuenta
+        como gasto del negocio (igual que el bolsillo de Caja)."""
+        pedido = self.get_pedido(pedido_id)
+        if not pedido or pedido['estado'] != 'pendiente':
+            return None
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        sesion = self._get_or_create_caja_sesion_hoy()
+        movimiento_id = None
+        if not sesion['cerrada']:
+            de_bolsillo = forma_pago == 'bolsillo'
+            self.cursor.execute(
+                """INSERT INTO caja_movimientos
+                   (sesion_id, tipo, descripcion, monto, fecha, forma_pago)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (sesion['id'], 'bolsillo' if de_bolsillo else 'gasto',
+                 f"{'Pago' if pedido['tipo'] == 'servicio' else 'Pedido'}"
+                 f" - {pedido['proveedor']}", monto_final, now,
+                 'efectivo' if de_bolsillo else forma_pago))
+            movimiento_id = self.cursor.lastrowid
+        self.cursor.execute(
+            """UPDATE pedidos
+               SET estado = 'recibido', monto_final = ?, forma_pago = ?,
+                   fecha_recibido = ?, movimiento_id = ?
+               WHERE id = ?""",
+            (monto_final, forma_pago, now, movimiento_id, pedido_id))
+        # Si se repite (ej. la luz todos los meses), queda cargado el
+        # siguiente, con lo que se pagó esta vez como monto aproximado.
+        if pedido['repetir'] in ('semanal', 'mensual'):
+            siguiente = self.add_pedido(
+                pedido['proveedor_id'],
+                self._sumar_periodo(pedido['fecha_estimada'],
+                                    pedido['repetir']),
+                monto_final, pedido['nota'], pedido['tipo'],
+                pedido['repetir'])
+            self.cursor.execute(
+                "UPDATE pedidos SET siguiente_id = ? WHERE id = ?",
+                (siguiente, pedido_id))
+        self.connection.commit()
+        return movimiento_id is not None
+
+    def deshacer_recepcion(self, pedido_id: int) -> bool:
+        """Vuelve un pedido recibido a pendiente (por si se confirmó por
+        error) y saca su gasto de Caja. Si ese gasto quedó en una caja ya
+        cerrada no se puede deshacer: devuelve False."""
+        pedido = self.get_pedido(pedido_id)
+        if not pedido or pedido['estado'] != 'recibido':
+            return False
+        if pedido['movimiento_id'] is not None:
+            cerrada = self.execute_query(
+                """SELECT cs.cerrada FROM caja_movimientos cm
+                   JOIN caja_sesiones cs ON cs.id = cm.sesion_id
+                   WHERE cm.id = ?""", (pedido['movimiento_id'],))
+            if cerrada and cerrada[0]['cerrada']:
+                return False
+            self.cursor.execute(
+                "DELETE FROM caja_movimientos WHERE id = ?",
+                (pedido['movimiento_id'],))
+        # El siguiente que se había creado solo se saca (si sigue pendiente)
+        if pedido['siguiente_id']:
+            self.cursor.execute(
+                "DELETE FROM pedidos WHERE id = ? AND estado = 'pendiente'",
+                (pedido['siguiente_id'],))
+        self.cursor.execute(
+            """UPDATE pedidos
+               SET estado = 'pendiente', monto_final = NULL,
+                   forma_pago = NULL, fecha_recibido = NULL,
+                   movimiento_id = NULL, siguiente_id = NULL
+               WHERE id = ?""", (pedido_id,))
+        self.connection.commit()
+        return True
 
     def __del__(self):
         # No cerrar la conexión en el destructor ya que es compartida

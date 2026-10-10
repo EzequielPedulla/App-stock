@@ -162,6 +162,18 @@ class FiadosController:
         muestran pero no cuentan."""
         cliente = self.db.get_cliente(cliente_id)
         movimientos = []
+        if cliente and cliente.get('saldo_inicial', 0) > 0.005:
+            # Lo que ya debía según el cuaderno de papel: va primero y no
+            # tiene fecha de compra (se muestra como "Cuaderno").
+            movimientos.append({
+                'fecha': '0000-00-00 00:00:00',
+                'tipo': 'Saldo anterior',
+                'detalle': 'Deuda que ya estaba anotada en el cuaderno',
+                'monto': float(cliente['saldo_inicial']),
+                'cuenta': True,
+                'pago_id': None,
+                'anterior': True,
+            })
         for v in self.db.get_ventas_fiadas_cliente(cliente_id):
             activa = v['status'] != 'cancelled'
             detalle = f"Venta N° {v['id']}: {v['productos']}"
